@@ -9,7 +9,7 @@ export default function Layout() {
         headerShown: false, // Hide default header
         tabBarStyle: {
           backgroundColor: '#F3F3F3', // White background
-          height: 60, // Adjust height
+          height: 50, // Adjust height
           borderTopWidth: 0, // Remove border
           elevation: 5, // Shadow for Android
           shadowOpacity: 0.1, // Shadow for iOS
@@ -20,7 +20,7 @@ export default function Layout() {
       <Tabs.Screen 
         name="home" 
         options={{
-          title: '',
+          title: 'home page',
           tabBarButton: (props:any) => <CustomTabButton {...props} icon="home" label="Home" />,
         }} 
       />
@@ -47,7 +47,7 @@ export default function Layout() {
 }
 
 // ✅ Custom Tab Button Component
-const CustomTabButton = ({ onPress, icon, label }: { onPress: () => void; icon: string; label: string }) => {
+const CustomTabButton = ({ onPress, icon, label }: { onPress: () => void; icon: keyof typeof FontAwesome.glyphMap; label: string }) => {
   return (
     <TouchableOpacity
       onPress={onPress}
