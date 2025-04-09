@@ -1,6 +1,7 @@
 import * as expoCrypto from 'expo-crypto';
 import { Stack } from 'expo-router';
 import React from 'react';
+import './global.css';
 
 if (typeof global.crypto === 'undefined') {
   global.crypto = {
