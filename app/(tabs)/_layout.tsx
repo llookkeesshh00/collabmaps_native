@@ -1,6 +1,6 @@
 import { Tabs } from 'expo-router';
 import { Text, TouchableOpacity, View } from 'react-native';
-import { FontAwesome } from '@expo/vector-icons'; // You can use other icon libraries too.
+import { FontAwesome } from '@expo/vector-icons';
 
 export default function Layout() {
   return (
@@ -21,7 +21,7 @@ export default function Layout() {
         name="home" 
         options={{
           title: 'home page',
-          tabBarButton: (props:any) => <CustomTabButton {...props} icon="home" label="Home" />,
+          tabBarButton: (props: any) => <CustomTabButton {...props} icon="home" label="Home" />,
         }} 
       />
 
@@ -30,7 +30,7 @@ export default function Layout() {
         name="recent" 
         options={{
           title: '',
-          tabBarButton: (props:any) => <CustomTabButton {...props} icon="clock-o" label="Recent" />,
+          tabBarButton: (props: any) => <CustomTabButton {...props} icon="clock-o" label="Recent" />,
         }} 
       />
 
@@ -39,7 +39,7 @@ export default function Layout() {
         name="profile" 
         options={{
           title: '',
-          tabBarButton: (props:any) => <CustomTabButton {...props} icon="user" label="Profile" />,
+          tabBarButton: (props: any) => <CustomTabButton {...props} icon="user" label="Profile" />,
         }} 
       />
     </Tabs>

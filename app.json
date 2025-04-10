@@ -1,3 +1,4 @@
+
 {
   "expo": {
     "name": "maps",
@@ -13,9 +14,7 @@
     },
     "android": {
       "config": {
-        "googleMaps": {
-          "apiKey": "AIzaSyAR8Sxn_UmTfySxL4DT1RefR8j-QYGntpA"
-        }
+        "googleMaps": {}
       },
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
