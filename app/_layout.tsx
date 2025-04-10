@@ -2,6 +2,7 @@ import * as expoCrypto from 'expo-crypto';
 import { Stack } from 'expo-router';
 import React from 'react';
 import './global.css';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 if (typeof global.crypto === 'undefined') {
   global.crypto = {
@@ -19,13 +20,16 @@ if (typeof global.crypto === 'undefined') {
     randomUUID: () => crypto.randomUUID(), // Fallback or throw error if not supported
   } as Crypto;
 }
+console.log('Crypto polyfill applied for environments without native support.');
 
 export default function RootLayout() {
   return (
-    <Stack
-      screenOptions={{
-        headerShown: false,
-      }}
-    />
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <Stack
+        screenOptions={{
+          headerShown: false,
+        }}
+      />
+    </GestureHandlerRootView>
   );
 }
