@@ -1,12 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Alert, View, StyleSheet } from 'react-native';
-import MapView, { Marker, Polyline } from 'react-native-maps';
+import { Alert, View, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import MapView, { Marker } from 'react-native-maps';
 import * as Location from 'expo-location';
 import SearchBar from '../components/SearchBar';
-import DirectionsSheet from '../components/DirectionsSheet';
-import axios from 'axios';
-import { GOOGLE_MAPS_API_KEY } from '@env';
-import polyline from '@mapbox/polyline';
+import Constants from 'expo-constants';
 
 type LatLng = {
   latitude: number;
@@ -17,11 +14,7 @@ const HomepageMap = () => {
   const mapRef = useRef<MapView>(null);
   const [userLocation, setUserLocation] = useState<LatLng | null>(null);
   const [destination, setDestination] = useState<LatLng | null>(null);
-  const [routeCoords, setRouteCoords] = useState<LatLng[]>([]);
-  const [isSheetOpen, setIsSheetOpen] = useState<boolean>(false);
-  const [placeDetails, setPlaceDetails] = useState<{ name: string; address: string } | null>(null);
-  const [routeDistance, setRouteDistance] = useState<string | undefined>(undefined);
-  const [routeDuration, setRouteDuration] = useState<string | undefined>(undefined);
+  const [searchQuery, setSearchQuery] = useState<string>(''); // NEW
 
   useEffect(() => {
     (async () => {
@@ -29,7 +22,7 @@ const HomepageMap = () => {
         const { status } = await Location.requestForegroundPermissionsAsync();
         if (status !== 'granted') {
           console.log("Location permission denied");
-          setUserLocation(null); // Use default location if permission denied
+          setUserLocation(null);
         } else {
           const location = await Location.getCurrentPositionAsync({
             accuracy: Location.Accuracy.High,
@@ -40,13 +33,11 @@ const HomepageMap = () => {
               longitude: location.coords.longitude,
             };
             setUserLocation(coords);
-            if (mapRef.current) {
-              mapRef.current.animateToRegion({
-                ...coords,
-                latitudeDelta: 0.05,
-                longitudeDelta: 0.05,
-              }, 1000);
-            }
+            mapRef.current?.animateToRegion({
+              ...coords,
+              latitudeDelta: 0.05,
+              longitudeDelta: 0.05,
+            }, 1000);
           }
         }
       } catch (error) {
@@ -55,117 +46,100 @@ const HomepageMap = () => {
     })();
   }, []);
 
-  const fetchRoute = async (origin: LatLng, destination: LatLng) => {
-    try {
-      const apiKey = GOOGLE_MAPS_API_KEY;
-      if (!apiKey) {
-        Alert.alert("Configuration Error", "Google Maps API key is missing.");
-        return;
-      }
-      const url = `https://maps.googleapis.com/maps/api/directions/json?origin=${origin.latitude},${origin.longitude}&destination=${destination.latitude},${destination.longitude}&key=${apiKey}`;
-      const response = await axios.get(url);
-      if (response.data.routes.length) {
-        const encodedPolyline = response.data.routes[0].overview_polyline.points;
-        const decodedCoords = polyline.decode(encodedPolyline).map(([latitude, longitude]) => ({
-          latitude,
-          longitude,
-        }));
-        const leg = response.data.routes[0].legs[0];
-        setRouteCoords(decodedCoords);
-        setRouteDistance(leg.distance.text);
-        setRouteDuration(leg.duration.text);
-      }
-    } catch (error) {
-      console.error("Error fetching route:", error);
-    }
-  };
-
   const handleSearchSelect = (details: any) => {
     const { lat, lng } = details.geometry.location;
     const newDestination = { latitude: lat, longitude: lng };
     setDestination(newDestination);
-    setPlaceDetails({
-      name: details.name || "Unknown Place",
-      address: details.formatted_address || "No address available",
-    });
-    setIsSheetOpen(true);
-    if (mapRef.current) {
-      mapRef.current.animateToRegion({
-        ...newDestination,
-        latitudeDelta: 0.02,
-        longitudeDelta: 0.02,
-      }, 800);
-    }
-    if (userLocation) {
-      fetchRoute(userLocation, newDestination);
+    mapRef.current?.animateToRegion({
+      ...newDestination,
+      latitudeDelta: 0.02,
+      longitudeDelta: 0.02,
+    }, 800);
+  };
+
+  const handleMyLocationPress = async () => {
+    try {
+      const location = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.High,
+      });
+      if (location?.coords && mapRef.current) {
+        const coords = {
+          latitude: location.coords.latitude,
+          longitude: location.coords.longitude,
+        };
+        setUserLocation(coords);
+        mapRef.current.animateToRegion({
+          ...coords,
+          latitudeDelta: 0.05,
+          longitudeDelta: 0.05,
+        }, 1000);
+      }
+    } catch (error) {
+      console.error("Error getting location:", error);
+      Alert.alert("Error", "Unable to get your location.");
     }
   };
 
   return (
     <View style={styles.container}>
       <View style={styles.searchBarContainer}>
-        <SearchBar onPlaceSelected={handleSearchSelect} />
+        <SearchBar onPlaceSelected={handleSearchSelect} query={searchQuery} setQuery={setSearchQuery} />
       </View>
       <MapView
         ref={mapRef}
         style={styles.map}
         provider="google"
-        initialRegion={
-          userLocation
-            ? {
-                latitude: userLocation.latitude,
-                longitude: userLocation.longitude,
-                latitudeDelta: 0.05,
-                longitudeDelta: 0.05,
-              }
-            : {
-                latitude: 37.78825,
-                longitude: -122.4324,
-                latitudeDelta: 0.05,
-                longitudeDelta: 0.05,
-              }
-        }
-        scrollEnabled={true}
-        zoomEnabled={true}
-        rotateEnabled={true}
-        pitchEnabled={true}
-        showsUserLocation={true}
-        showsMyLocationButton={true}
+        initialRegion={{
+          latitude: userLocation?.latitude ?? 37.78825,
+          longitude: userLocation?.longitude ?? -122.4324,
+          latitudeDelta: 0.05,
+          longitudeDelta: 0.05,
+        }}
+        showsUserLocation
+        showsMyLocationButton={false}
+        mapPadding={{ top: 0, right: 0, bottom: 100, left: 0 }}
       >
         {destination && <Marker coordinate={destination} title="Destination" />}
-        {routeCoords.length > 0 && (
-          <Polyline coordinates={routeCoords} strokeWidth={4} strokeColor="blue" />
-        )}
       </MapView>
-      <DirectionsSheet
-        isOpen={isSheetOpen}
-        onClose={() => {
-          setIsSheetOpen(false);
-          setRouteCoords([]);
-          setRouteDistance(undefined);
-          setRouteDuration(undefined);
-        }}
-        placeDetails={placeDetails}
-        distance={routeDistance}
-        duration={routeDuration}
-      />
+
+      <TouchableOpacity style={styles.myLocationButton} onPress={handleMyLocationPress}>
+        <Image source={require('../../assets/images/my-location.png')} style={styles.myLocationIcon} />
+      </TouchableOpacity>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    flexDirection: 'column',
-  },
+  container: { flex: 1, flexDirection: 'column' },
   searchBarContainer: {
-    height: 60, // Fixed height for the search bar
-    width: '100%',
-    backgroundColor: 'white', // Optional, makes it visually distinct
-    zIndex: 1, // Ensures it appears above the map
+    position: 'absolute',
+    top: 20,
+    left: 15,
+    right: 15,
+    zIndex: 10,
+    alignItems: 'center',
   },
-  map: {
-    flex: 1, // Takes up the remaining space below the search bar
+  map: { flex: 1 },
+  myLocationButton: {
+    position: 'absolute',
+    top: 88,
+    right: 15,
+    backgroundColor: '#fff',
+    borderRadius: 22,
+    width: 44,
+    height: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
+    zIndex: 5,
+  },
+  myLocationIcon: {
+    width: 24,
+    height: 24,
   },
 });
 

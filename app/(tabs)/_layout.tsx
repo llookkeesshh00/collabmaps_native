@@ -1,10 +1,12 @@
 import { Tabs } from 'expo-router';
-import { Text, TouchableOpacity, View } from 'react-native';
+import { Text, TouchableOpacity } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
 
 export default function Layout() {
   return (
     <Tabs
+      initialRouteName="home"
+      tabBarHideOnKeyboard={true}
       screenOptions={{
         headerShown: false, // Hide default header
         tabBarStyle: {
@@ -20,7 +22,7 @@ export default function Layout() {
       <Tabs.Screen 
         name="home" 
         options={{
-          title: 'home page',
+          title: 'Home Page',
           tabBarButton: (props: any) => <CustomTabButton {...props} icon="home" label="Home" />,
         }} 
       />
@@ -29,7 +31,7 @@ export default function Layout() {
       <Tabs.Screen 
         name="recent" 
         options={{
-          title: '',
+          title: 'Recent',
           tabBarButton: (props: any) => <CustomTabButton {...props} icon="clock-o" label="Recent" />,
         }} 
       />
@@ -38,7 +40,7 @@ export default function Layout() {
       <Tabs.Screen 
         name="profile" 
         options={{
-          title: '',
+          title: 'Profile',
           tabBarButton: (props: any) => <CustomTabButton {...props} icon="user" label="Profile" />,
         }} 
       />
