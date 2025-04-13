@@ -35,7 +35,7 @@ const SearchBar = forwardRef<SearchBarRef, Props>(({ onPlaceSelected }, ref) => 
         placeholder="Search for a location"
         minLength={2}
         fetchDetails
-        onPress={(data, details = null) => onPlaceSelected(details)}
+        onPress={(data, details = null) => onPlaceSelected({ data, details })}
         query={{
           key: GOOGLE_MAPS_API_KEY,
           language: 'en',
@@ -115,18 +115,18 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   locationIcon: {
-    width: 20,
-    height: 20,
-    marginRight: 12,
+    width: 25,
+    height: 25,
+    marginRight: 10,
     tintColor: '#007AFF',
   },
   mainText: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '600',
     color: '#000',
   },
   secondaryText: {
-    fontSize: 12,
+    fontSize: 10,
     color: '#555',
   },
 });
