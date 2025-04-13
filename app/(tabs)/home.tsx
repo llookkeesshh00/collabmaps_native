@@ -150,6 +150,7 @@ const HomepageMap = () => {
         isVisible={isModalVisible}
         onBackdropPress={() => setIsModalVisible(false)}
         style={styles.bottomModal}
+        backdropOpacity={0} 
       >
         <View style={styles.modalContent}>
           {placeDetails && (
@@ -179,11 +180,11 @@ const HomepageMap = () => {
             </>
           )}
 
-          <View className='flex flex-row justify-between gap-2 '> 
-            <TouchableOpacity 
+          <View className='flex flex-row justify-between gap-2 '>
+            <TouchableOpacity
               style={styles.optionButton}
               onPress={() => {
-             
+
                 setIsModalVisible(false);
                 if (userLocation && destination) {
                   router.push({
@@ -196,18 +197,20 @@ const HomepageMap = () => {
                     },
                   })
 
-              }}
-            }
+                }
+              }
+              }
             >
               <Image source={require('../../assets/images/start.png')} style={styles.myLocationIcon} />
               <Text style={styles.optionText}>Start</Text>
             </TouchableOpacity>
-          
-            <TouchableOpacity 
+
+            <TouchableOpacity
               style={styles.optionButton}
               onPress={() => {
                 Alert.alert("Option 1", "Do something!");
                 setIsModalVisible(false);
+                ;
               }}
             >
               <Image source={require('../../assets/images/directions.png')} style={styles.myLocationIcon} />
@@ -215,8 +218,8 @@ const HomepageMap = () => {
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[styles.optionButton, { backgroundColor: '#ccc' }]}
-              onPress={() => {setIsModalVisible(false); }}
+              style={[styles.optionButton, { backgroundColor: '#EEEEEE' }]}
+              onPress={() => { setIsModalVisible(false); }}
             >
               <Image source={require('../../assets/images/close.png')} style={styles.myLocationIcon} />
               <Text style={[styles.optionText, { color: 'black' }]}>Cancel</Text>
@@ -259,7 +262,7 @@ const styles = StyleSheet.create({
   myLocationIcon: {
     width: 24,
     height: 24,
-  
+
   },
   bottomModal: {
     justifyContent: 'flex-end',
@@ -278,15 +281,15 @@ const styles = StyleSheet.create({
   },
   optionButton: {
     marginTop: 15,
-    display:'flex',
-    flexDirection:'row',
-    justifyContent:'center',
-    alignItems:'center',
-    gap:5,
+    display: 'flex',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 5,
     paddingVertical: 12,
     paddingHorizontal: 20,
     backgroundColor: '#2D79F4',
-    borderRadius: 20,
+    borderRadius: 40,
   },
   optionText: {
     color: 'white',

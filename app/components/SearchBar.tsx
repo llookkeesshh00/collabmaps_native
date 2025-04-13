@@ -39,6 +39,7 @@ const SearchBar = forwardRef<SearchBarRef, Props>(({ onPlaceSelected }, ref) => 
         query={{
           key: GOOGLE_MAPS_API_KEY,
           language: 'en',
+          components: 'country:in'
         }}
         enablePoweredByContainer={false}
         styles={{
@@ -85,15 +86,24 @@ const SearchBar = forwardRef<SearchBarRef, Props>(({ onPlaceSelected }, ref) => 
             backgroundColor: '#eee',
           },
         }}
-        renderRow={(data) => (
-          <View style={styles.suggestionRow}>
-            <Image source={require('../../assets/images/location.png')} style={styles.locationIcon} />
-            <View style={styles.textContainer}>
-              <Text style={styles.mainText}>{data.structured_formatting.main_text}</Text>
-              <Text style={styles.secondaryText}>{data.structured_formatting.secondary_text}</Text>
+        renderRow={(data) => {
+          const mainText = data.structured_formatting.main_text;
+          const secondaryText = data.structured_formatting.secondary_text;
+        
+          const truncatedMainText = mainText.length > 35 ? `${mainText.slice(0, 25)}...` : mainText;
+          const truncatedSecondaryText = secondaryText.length > 60 ? `${secondaryText.slice(0, 40)}...` : secondaryText;
+        
+          return (
+            <View style={styles.suggestionRow}>
+              <Image source={require('../../assets/images/location.png')} style={styles.locationIcon} />
+              <View style={styles.textContainer}>
+                <Text style={styles.mainText}>{truncatedMainText}</Text>
+                <Text style={styles.secondaryText}>{truncatedSecondaryText}</Text>
+              </View>
             </View>
-          </View>
-        )}
+          );
+        }}
+        
       />
     </View>
   );
@@ -126,7 +136,7 @@ const styles = StyleSheet.create({
     color: '#000',
   },
   secondaryText: {
-    fontSize: 10,
+    fontSize: 12,
     color: '#555',
   },
 });
