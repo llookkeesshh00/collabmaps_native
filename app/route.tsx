@@ -90,7 +90,7 @@ export default function RouteScreen() {
       case 'train':
         googleMode = 'transit';
         break;
-      case 'public':
+      case 'walk':
         googleMode = 'walking';
         break;
       default:
@@ -151,31 +151,43 @@ export default function RouteScreen() {
         </Marker>
 
         {/* Render all alternate routes first */}
-        {routes.slice(1).map((route, index) => {
+        {routes.map((route, index) => {
           const midPointIndex = Math.floor(route.coords.length / 2);
           const midPoint = route.coords[midPointIndex];
 
           return (
             <React.Fragment key={`route-${index}`}>
+              {/* Border Polyline (background stroke) */}
+              {/* Border Polyline (thicker, behind) */}
               <Polyline
                 coordinates={route.coords}
-                strokeWidth={index === 0 ? 8 : 6}
-                strokeColor={index === 0 ? "#0F53FF" : "#63C6F7"}
+                strokeWidth={index === 0 ? 10 : 7}
+                strokeColor={index === 0 ? "blue" : "#00A8DC"}
+                zIndex={index === 0 ? 2 : 1}
               />
-              {/* Invisible Marker to simulate tapping the route */}
+
+              {/* Main Polyline (thinner, on top of border) */}
+              <Polyline
+                coordinates={route.coords}
+                strokeWidth={index === 0 ? 7 : 4}
+                strokeColor={index === 0 ? "#4F7BFF" : "#D0EDFB"}
+                zIndex={index === 0 ? 3 : 2}
+              />
+
+
+              {/* Invisible Marker for interaction */}
               <Marker
                 coordinate={midPoint}
+                
                 onPress={async () => {
                   setSelectedRoute(route);
                   setSelectedMode('bike');
                   await getData('bike');
                   setModalVisible(true);
-                  //by default
-
                 }}
-              // Invisible marker
               />
             </React.Fragment>
+
           );
         })}
       </MapView>
@@ -210,16 +222,16 @@ export default function RouteScreen() {
               </View>
               <View className='border-t-2 border-gray-200  mt-4 mb-4 p-4'>
                 {modeRouteDetails && (
-                  <View className='flex flex-row  gap-20 ml-4'>
+                  <View className='flex flex-row  gap-2 '>
                     <View className='flex flex-col justify-between items-center'>
                       <Text style={{ fontSize: 26, color: '#FF4D00' }}>{(modeRouteDetails.duration / 60).toFixed(1)} </Text>
                       <Text style={{ color: '#FF4D00' }}>min</Text>
                     </View>
 
-                    <View className='ml-6 flex flex-col items-start justify-center border-2 border-black'>
-                      <Text style={{ fontWeight: 'bold' ,marginLeft:4}}>{selectedMode.toLocaleUpperCase()}</Text>
+                    <View className=' flex flex-col items-start justify-center '>
+                      <Text style={{ fontWeight: 'bold', marginLeft: 4 }}>{selectedMode.toLocaleUpperCase()}</Text>
                       <Text> {selectedRoute.summary}</Text>
-                      <Text style={{color:'#2D79F4',marginLeft:3}}>{(modeRouteDetails.distance / 1000).toFixed(1)} km</Text>
+                      <Text style={{ color: '#2D79F4', marginLeft: 3 }}>{(modeRouteDetails.distance / 1000).toFixed(1)} km</Text>
                     </View>
 
 
@@ -228,7 +240,7 @@ export default function RouteScreen() {
               </View>
 
               <View className='flex flex-row gap-5 justify-center items-center'>
-                <TouchableOpacity style={styles.optionButton} onPress={() => { 
+                <TouchableOpacity style={styles.optionButton} onPress={() => {
                   console.log(selectedRoute?.summary)
                 }} >
                   <Image source={require('../assets/images/start.png')} style={styles.myLocationIcon} />
@@ -309,6 +321,8 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
     marginBottom: 10,
+    marginTop: 2,
+    padding: 10
   },
 
   optionText: {
