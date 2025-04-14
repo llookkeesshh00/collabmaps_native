@@ -90,8 +90,8 @@ const SearchBar = forwardRef<SearchBarRef, Props>(({ onPlaceSelected }, ref) => 
           const mainText = data.structured_formatting.main_text;
           const secondaryText = data.structured_formatting.secondary_text;
         
-          const truncatedMainText = mainText.length > 35 ? `${mainText.slice(0, 25)}...` : mainText;
-          const truncatedSecondaryText = secondaryText.length > 60 ? `${secondaryText.slice(0, 40)}...` : secondaryText;
+          const truncatedMainText = mainText.length > 35 ? `${mainText.slice(0, 30)}...` : mainText;
+          const truncatedSecondaryText = secondaryText.length > 70 ? `${secondaryText.slice(0, 40)}...` : secondaryText;
         
           return (
             <View style={styles.suggestionRow}>

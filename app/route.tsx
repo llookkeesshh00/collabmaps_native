@@ -6,6 +6,7 @@ import axios from 'axios';
 import polyline from '@mapbox/polyline';
 import Constants from 'expo-constants';
 import Modal from 'react-native-modal'; // You need to install this package
+import { router } from 'expo-router';
 
 const GOOGLE_MAPS_API_KEY = Constants.expoConfig?.extra?.googleMapsApiKey;
 
@@ -42,7 +43,8 @@ export default function RouteScreen() {
   useEffect(() => {
     const fetchRoutes = async () => {
       try {
-        const url = `https://maps.googleapis.com/maps/api/directions/json?origin=${source.latitude},${source.longitude}&destination=${destination.latitude},${destination.longitude}&alternatives=true&key=${GOOGLE_MAPS_API_KEY}`;
+        const googleMode = 'driving'
+        const url = `https://maps.googleapis.com/maps/api/directions/json?origin=${source.latitude},${source.longitude}&destination=${destination.latitude},${destination.longitude}&mode=${googleMode}&alternatives=true&key=${GOOGLE_MAPS_API_KEY}`;
         const response = await axios.get(url);
 
         const routeList: RouteInfo[] = response.data.routes.map((route: any) => {
@@ -120,6 +122,8 @@ export default function RouteScreen() {
         };
 
         setModeRouteDetails(routeInfo);
+        //note moderoutedetails contains bike ,car,walk specific detials 
+
       }
     } catch (error) {
       console.error('Error fetching mode-specific data:', error);
@@ -178,7 +182,7 @@ export default function RouteScreen() {
               {/* Invisible Marker for interaction */}
               <Marker
                 coordinate={midPoint}
-                
+
                 onPress={async () => {
                   setSelectedRoute(route);
                   setSelectedMode('bike');
@@ -193,11 +197,7 @@ export default function RouteScreen() {
       </MapView>
 
       {/* Modal to show selected route details */}
-      <Modal
-        isVisible={modalVisible}
-        onBackdropPress={() => setModalVisible(false)}
-        style={styles.bottomModal}
-      >
+      <Modal isVisible={modalVisible} onBackdropPress={() => setModalVisible(false)} style={styles.bottomModal} backdropOpacity={0}>
         <View style={styles.modalContent}>
           {selectedRoute && (
             <>
@@ -246,7 +246,25 @@ export default function RouteScreen() {
                   <Image source={require('../assets/images/start.png')} style={styles.myLocationIcon} />
                   <Text style={styles.optionText}>Start </Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.optionButtoncollab} onPress={() => { }} >
+                <TouchableOpacity style={styles.optionButtoncollab} onPress={() => {
+                  console.log("hii")
+                  if (modeRouteDetails ) {
+                    router.push({
+                      pathname: '/collab',
+                      params: {
+                        summary: selectedRoute.summary,
+                        duration: modeRouteDetails.duration.toString(),
+                        distance: modeRouteDetails.distance.toString(),
+                        mode: selectedMode,
+                        points: JSON.stringify(selectedRoute.coords),
+                        slat: source.latitude,
+                        slng: source.longitude,
+                        dlat: destination.latitude,
+                        dlng: destination.longitude
+                      }
+                    })
+                  }
+                }} >
                   <Image source={require('../assets/images/coolab.png')} style={styles.myLocationIcon} />
                   <Text style={styles.optionText}>Collab </Text>
                 </TouchableOpacity>

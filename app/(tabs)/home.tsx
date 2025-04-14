@@ -246,8 +246,9 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 88,
     right: 15,
-    backgroundColor: '#2D79F4',
-    borderRadius: 22,
+    padding:20,
+    backgroundColor: 'white',
+    borderRadius: 12,
     width: 44,
     height: 44,
     justifyContent: 'center',
@@ -262,6 +263,7 @@ const styles = StyleSheet.create({
   myLocationIcon: {
     width: 24,
     height: 24,
+    
 
   },
   bottomModal: {
