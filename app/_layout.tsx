@@ -23,17 +23,20 @@ if (typeof global.crypto === 'undefined') {
 }
 console.log('Crypto polyfill applied for environments without native support.');
 
+
+
+
 export default function RootLayout() {
   return (
-    <SafeAreaProvider >
+    <SafeAreaProvider>
       <StatusBar translucent backgroundColor="transparent" style="dark" />
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <Stack
-        screenOptions={{
-          headerShown: false,
-        }}
-      />
-    </GestureHandlerRootView>
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <Stack
+          screenOptions={{
+            headerShown: false,
+          }}
+        />
+      </GestureHandlerRootView>
     </SafeAreaProvider>
   );
 }

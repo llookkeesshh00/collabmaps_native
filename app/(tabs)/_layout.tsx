@@ -7,8 +7,8 @@ import { StatusBar } from 'expo-status-bar';
 export default function Layout() {
   return (
     <SafeAreaProvider >
+        <StatusBar translucent backgroundColor="transparent"  />
       <View style={{ flex: 1, backgroundColor: '#fff',borderRadius:20 }}>
-        <StatusBar translucent backgroundColor="transparent" style="dark" />
 
         <Tabs
           initialRouteName="home"

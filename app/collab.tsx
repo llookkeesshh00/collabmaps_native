@@ -33,17 +33,17 @@ export default function CollabPage() {
         <View style={styles.container}>
             <Text style={styles.title}>Start a Collaborative Trip</Text>
             <View style={styles.detailscontainer}>
-                <View className='flex  flex-row gap-10 items-center'>
+                <View className='flex  flex-row gap-3 items-center'>
                     <View style={styles.optionButtoncollab}>
                         <Image source={require('../assets/images/mode.png')} style={styles.myLocationIcon} />
                     </View>
-                    <Text style={{color:'',fontSize: 25 ,marginLeft:20}}>{typeof mode === 'string' ? mode.toUpperCase() : ''}</Text>
+                    <Text style={{color:'',fontSize: 25 }}>{typeof mode === 'string' ? mode.toUpperCase() : ''}</Text>
                 </View>
-                <View className='flex  flex-row gap-10 items-center'>
+                <View className='flex  flex-row gap-3 items-center'>
                     <View style={styles.optionButtoncollab}>
                         <Image source={require('../assets/images/summary.png')} style={styles.myLocationIcon} />
                     </View>
-                    <Text style={{color:'',fontSize: 15 ,marginLeft:20}}>{summary}</Text>
+                    <Text style={{color:'',fontSize: 15 }}>{summary}</Text>
                 </View>
                 <View className='flex  flex-row gap-3 items-center'>
                     <View style={styles.optionButtoncollab}>
@@ -82,7 +82,7 @@ export default function CollabPage() {
 }
 
 const styles = StyleSheet.create({
-    container: { padding: 20 },
+    container: { padding: 20 ,marginTop:20},
     title: { fontSize: 22, fontWeight: 'bold', marginBottom: 20 },
     input: {
         borderWidth: 1,
@@ -94,7 +94,7 @@ const styles = StyleSheet.create({
     button: {
         backgroundColor: '#2D79F4',
         padding: 15,
-        borderRadius: 10,
+        borderRadius: 40,
         alignItems: 'center',
     },
     optionButtoncollab: {
@@ -136,5 +136,5 @@ const styles = StyleSheet.create({
 
     }
     ,
-    buttonText: { color: 'white', fontWeight: 'bold' },
+    buttonText: { color: 'white', fontWeight: 'bold',borderRadius:20 },
 });
