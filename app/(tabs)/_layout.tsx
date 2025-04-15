@@ -1,55 +1,65 @@
 import { Tabs } from 'expo-router';
-import { Text, TouchableOpacity } from 'react-native';
+import { Text, TouchableOpacity, View } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { StatusBar } from 'expo-status-bar';
 
 export default function Layout() {
   return (
-    <Tabs
-      initialRouteName="home"
-      tabBarHideOnKeyboard={true}
-      screenOptions={{
-        headerShown: false, // Hide default header
-        tabBarStyle: {
-          backgroundColor: '#F3F3F3', // White background
-          height: 50, // Adjust height
-          borderTopWidth: 0, // Remove border
-          elevation: 5, // Shadow for Android
-          shadowOpacity: 0.1, // Shadow for iOS
-        },
-      }}
-    >
-      {/* Home Page */}
-      <Tabs.Screen 
-        name="home" 
-        options={{
-          title: 'Home Page',
-          tabBarButton: (props: any) => <CustomTabButton {...props} icon="home" label="Home" />,
-        }} 
-      />
+    <SafeAreaProvider >
+      <View style={{ flex: 1, backgroundColor: '#fff',borderRadius:20 }}>
+        <StatusBar translucent backgroundColor="transparent" style="dark" />
 
-      {/* Recent Page */}
-      <Tabs.Screen 
-        name="recent" 
-        options={{
-          title: 'Recent',
-          tabBarButton: (props: any) => <CustomTabButton {...props} icon="clock-o" label="Recent" />,
-        }} 
-      />
-
-      {/* Profile Page */}
-      <Tabs.Screen 
-        name="profile" 
-        options={{
-          title: 'Profile',
-          tabBarButton: (props: any) => <CustomTabButton {...props} icon="user" label="Profile" />,
-        }} 
-      />
-    </Tabs>
+        <Tabs
+          initialRouteName="home"
+          tabBarHideOnKeyboard={true}
+          screenOptions={{
+            headerShown: false,
+            tabBarStyle: {
+              backgroundColor: '#F3F3F3',
+              height: 60,
+              borderTopWidth: 0,
+              elevation: 5,
+              shadowOpacity: 0.1,
+            },
+          }}
+        >
+          <Tabs.Screen
+            name="home"
+            options={{
+              title: 'Home Page',
+              tabBarButton: (props: any) => <CustomTabButton {...props} icon="home" label="Home" />,
+            }}
+          />
+          <Tabs.Screen
+            name="recent"
+            options={{
+              title: 'Recent',
+              tabBarButton: (props: any) => <CustomTabButton {...props} icon="clock-o" label="Recent" />,
+            }}
+          />
+          <Tabs.Screen
+            name="profile"
+            options={{
+              title: 'Profile',
+              tabBarButton: (props: any) => <CustomTabButton {...props} icon="user" label="Profile" />,
+            }}
+          />
+        </Tabs>
+      </View>
+    </SafeAreaProvider>
   );
 }
 
-// ✅ Custom Tab Button Component
-const CustomTabButton = ({ onPress, icon, label }: { onPress: () => void; icon: keyof typeof FontAwesome.glyphMap; label: string }) => {
+const CustomTabButton = ({
+  onPress,
+  icon,
+  label,
+}: {
+  onPress: () => void;
+  icon: keyof typeof FontAwesome.glyphMap;
+  label: string;
+}) => {
   return (
     <TouchableOpacity
       onPress={onPress}
@@ -59,8 +69,8 @@ const CustomTabButton = ({ onPress, icon, label }: { onPress: () => void; icon: 
         alignItems: 'center',
       }}
     >
-      <FontAwesome name={icon} size={24} color="#333" />
-      <Text style={{ fontSize: 12, color: '#333', marginTop: 4 }}>{label}</Text>
+      <FontAwesome name={icon} size={22} color="#333" />
+      <Text style={{ fontSize: 11, color: '#333', marginTop: 2 }}>{label}</Text>
     </TouchableOpacity>
   );
 };

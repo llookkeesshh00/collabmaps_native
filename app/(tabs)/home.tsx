@@ -8,6 +8,8 @@ import Modal from 'react-native-modal';
 import axios from 'axios'
 import { ScrollView } from 'react-native';
 import { router } from 'expo-router';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { StatusBar } from 'expo-status-bar';
 
 const GOOGLE_MAPS_API_KEY = Constants.expoConfig?.extra?.googleMapsApiKey;
 //defining a structure for an object 
@@ -119,115 +121,120 @@ const HomepageMap = () => {
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.searchBarContainer}>
-        <SearchBar onPlaceSelected={handleSearchSelect} query={searchQuery} setQuery={setSearchQuery} />
-      </View>
+    <SafeAreaView style={{ flex: 1 }}>
+      {/* your map and all content goes here */}
 
-      <MapView
-        ref={mapRef}
-        style={styles.map}
-        provider="google"
-        initialRegion={{
-          latitude: userLocation?.latitude ?? 37.78825,
-          longitude: userLocation?.longitude ?? -122.4324,
-          latitudeDelta: 0.05,
-          longitudeDelta: 0.05,
-        }}
-        showsUserLocation
-        showsMyLocationButton={false}
-        mapPadding={{ top: 0, right: 0, bottom: 100, left: 0 }}
-      >
-        {destination && <Marker coordinate={destination} title="Destination" />}
-      </MapView>
-      {/* this is for */}
-      <TouchableOpacity style={styles.myLocationButton} onPress={handleMyLocationPress}>
-        <Image source={require('../../assets/images/my-location.png')} style={styles.myLocationIcon} />
-      </TouchableOpacity>
-
-      {/* Bottom Popup Modal */}
-      <Modal
-        isVisible={isModalVisible}
-        onBackdropPress={() => setIsModalVisible(false)}
-        style={styles.bottomModal}
-        backdropOpacity={0} 
-      >
-        <View style={styles.modalContent}>
-          {placeDetails && (
-            <>
-              <Text style={styles.modalTitle}>{placeDetails.name}</Text>
-              <Text className='text-gray-600 mb-6'>{placeDetails.address}</Text>
-              {placeDetails.photoUrls?.length > 0 && (
-                <View style={{ height: 150, marginBottom: 10 }}>
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                    {placeDetails.photoUrls.map((url, index) => (
-                      <Image
-                        key={index}
-                        source={{ uri: url }}
-                        style={{
-                          width: 250,
-                          height: 150,
-                          marginRight: 10,
-                          borderRadius: 10,
-                        }}
-                        resizeMode="cover"
-                      />
-                    ))}
-                  </ScrollView>
-                </View>
-              )}
-
-            </>
-          )}
-
-          <View className='flex flex-row justify-between gap-2 '>
-            <TouchableOpacity
-              style={styles.optionButton}
-              onPress={() => {
-
-                setIsModalVisible(false);
-                if (userLocation && destination) {
-                  router.push({
-                    pathname: '/route',
-                    params: {
-                      slat: userLocation.latitude,
-                      slng: userLocation.longitude,
-                      dlat: destination.latitude,
-                      dlng: destination.longitude,
-                    },
-                  })
-
-                }
-              }
-              }
-            >
-              <Image source={require('../../assets/images/start.png')} style={styles.myLocationIcon} />
-              <Text style={styles.optionText}>Start</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.optionButton}
-              onPress={() => {
-                Alert.alert("Option 1", "Do something!");
-                setIsModalVisible(false);
-                ;
-              }}
-            >
-              <Image source={require('../../assets/images/directions.png')} style={styles.myLocationIcon} />
-              <Text style={styles.optionText}>Directions</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.optionButton, { backgroundColor: '#EEEEEE' }]}
-              onPress={() => { setIsModalVisible(false); }}
-            >
-              <Image source={require('../../assets/images/close.png')} style={styles.myLocationIcon} />
-              <Text style={[styles.optionText, { color: 'black' }]}>Cancel</Text>
-            </TouchableOpacity>
-          </View>
+      <StatusBar translucent backgroundColor="transparent" style="dark" />
+      <View style={styles.container}>
+        <View style={styles.searchBarContainer}>
+          <SearchBar onPlaceSelected={handleSearchSelect} query={searchQuery} setQuery={setSearchQuery} />
         </View>
-      </Modal>
-    </View>
+
+        <MapView
+          ref={mapRef}
+          style={styles.map}
+          provider="google"
+          initialRegion={{
+            latitude: userLocation?.latitude ?? 37.78825,
+            longitude: userLocation?.longitude ?? -122.4324,
+            latitudeDelta: 0.05,
+            longitudeDelta: 0.05,
+          }}
+          showsUserLocation
+          showsMyLocationButton={false}
+          mapPadding={{ top: 0, right: 0, bottom: 100, left: 0 }}
+        >
+          {destination && <Marker coordinate={destination} title="Destination" />}
+        </MapView>
+        {/* this is for */}
+        <TouchableOpacity style={styles.myLocationButton} onPress={handleMyLocationPress}>
+          <Image source={require('../../assets/images/my-location.png')} style={styles.myLocationIcon} />
+        </TouchableOpacity>
+
+        {/* Bottom Popup Modal */}
+        <Modal
+          isVisible={isModalVisible}
+          onBackdropPress={() => setIsModalVisible(false)}
+          style={styles.bottomModal}
+          backdropOpacity={0}
+        >
+          <View style={styles.modalContent}>
+            {placeDetails && (
+              <>
+                <Text style={styles.modalTitle}>{placeDetails.name}</Text>
+                <Text className='text-gray-600 mb-6'>{placeDetails.address}</Text>
+                {placeDetails.photoUrls?.length > 0 && (
+                  <View style={{ height: 150, marginBottom: 10 }}>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                      {placeDetails.photoUrls.map((url, index) => (
+                        <Image
+                          key={index}
+                          source={{ uri: url }}
+                          style={{
+                            width: 250,
+                            height: 150,
+                            marginRight: 10,
+                            borderRadius: 10,
+                          }}
+                          resizeMode="cover"
+                        />
+                      ))}
+                    </ScrollView>
+                  </View>
+                )}
+
+              </>
+            )}
+
+            <View className='flex flex-row justify-between gap-2 '>
+              <TouchableOpacity
+                style={styles.optionButton}
+                onPress={() => {
+
+                  setIsModalVisible(false);
+                  if (userLocation && destination) {
+                    router.push({
+                      pathname: '/route',
+                      params: {
+                        slat: userLocation.latitude,
+                        slng: userLocation.longitude,
+                        dlat: destination.latitude,
+                        dlng: destination.longitude,
+                      },
+                    })
+
+                  }
+                }
+                }
+              >
+                <Image source={require('../../assets/images/start.png')} style={styles.myLocationIcon} />
+                <Text style={styles.optionText}>Start</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.optionButton}
+                onPress={() => {
+                  Alert.alert("Option 1", "Do something!");
+                  setIsModalVisible(false);
+                  ;
+                }}
+              >
+                <Image source={require('../../assets/images/directions.png')} style={styles.myLocationIcon} />
+                <Text style={styles.optionText}>Directions</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.optionButton, { backgroundColor: '#EEEEEE' }]}
+                onPress={() => { setIsModalVisible(false); }}
+              >
+                <Image source={require('../../assets/images/close.png')} style={styles.myLocationIcon} />
+                <Text style={[styles.optionText, { color: 'black' }]}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+      </View>
+    </SafeAreaView>
   );
 };
 
@@ -246,7 +253,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 88,
     right: 15,
-    padding:20,
+    padding: 20,
     backgroundColor: 'white',
     borderRadius: 12,
     width: 44,
@@ -263,7 +270,7 @@ const styles = StyleSheet.create({
   myLocationIcon: {
     width: 24,
     height: 24,
-    
+
 
   },
   bottomModal: {

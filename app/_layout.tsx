@@ -3,7 +3,8 @@ import { Stack } from 'expo-router';
 import React from 'react';
 import './global.css';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { StatusBar } from 'expo-status-bar';
 if (typeof global.crypto === 'undefined') {
   global.crypto = {
     getRandomValues: <T extends ArrayBufferView | null>(array: T): T => {
@@ -24,6 +25,8 @@ console.log('Crypto polyfill applied for environments without native support.');
 
 export default function RootLayout() {
   return (
+    <SafeAreaProvider >
+      <StatusBar translucent backgroundColor="transparent" style="dark" />
     <GestureHandlerRootView style={{ flex: 1 }}>
       <Stack
         screenOptions={{
@@ -31,5 +34,6 @@ export default function RootLayout() {
         }}
       />
     </GestureHandlerRootView>
+    </SafeAreaProvider>
   );
 }
