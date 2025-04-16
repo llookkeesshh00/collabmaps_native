@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useTransition } from 'react';
 import { useLocalSearchParams } from 'expo-router';
 import { View, Text, Dimensions, TouchableOpacity, StyleSheet, Image } from 'react-native';
 import * as Location from 'expo-location';
@@ -9,58 +9,90 @@ import { router } from 'expo-router';
 export default function LiveMapPage() {
     const {
         username, summary, duration, distance, mode,
-        points, slat, slng, dlat, dlng
+        points, slat, slng, dlat, dlng,
+        action,
+        roomId: incomingRoomId,
     } = useLocalSearchParams();
 
-    const decodedPoints = points ? JSON.parse(points as string) : [];
+
 
     const ws = useRef<WebSocket | null>(null);
     const [roomId, setRoomId] = useState(null);
+   const [DecodedPoints, setDecodedPoints] = useState([])
     const [userId, setUserId] = useState(null);
     const [users, setUsers] = useState({});
 
     useEffect(() => {
-        const host = '192.168.31.7';
-        ws.current = new WebSocket(`ws://${host}:3001`);
-
-        ws.current.onopen = () => {
-            console.log("WebSocket opened, sending CREATE_ROOM...");
-            ws.current?.send(JSON.stringify({
-                type: "CREATE_ROOM",
-                payload: {
+        const connect = async () => {
+            const { status } = await Location.requestForegroundPermissionsAsync();
+            if (status !== 'granted') return;
+    
+            const location = await Location.getCurrentPositionAsync({});
+            const from = {
+                latitude: location.coords.latitude,
+                longitude: location.coords.longitude,
+            };
+            const to = {
+                latitude: parseFloat(dlat as string),
+                longitude: parseFloat(dlng as string),
+            };
+          
+    
+            let routePoints = [];
+    
+            if (points) {
+                routePoints = typeof points === 'string' ? JSON.parse(points) : [];
+            } else {
+                routePoints = await fetchRoute(from, to);
+            }
+    
+            setDecodedPoints(routePoints);
+    
+            ws.current = new WebSocket(`ws://192.168.118.33:3001`);
+            ws.current.onopen = () => {
+                const payload = {
                     name: username,
-                    points: decodedPoints
-                }
-            }));
-        };
-
-        ws.current.onmessage = (event) => {
-            const data = JSON.parse(event.data);
-            // console.log("WebSocket message received:", JSON.stringify(data, null, 2));
-
-            if (data.type === "CREATED_ROOM") {
-                setRoomId(data.payload.roomId);
-                setUserId(data.payload.userId);
-            }
-            else if (data.type === "UPDATED_ROOM") {
-                if (data.payload?.users && typeof data.payload.users === 'object') {
-                    const updatedUsers = Object.entries(data.payload.users).map(([uid, user]: [string, any]) => ({
-                        ...user,
-                        route: typeof user.route === 'string' ? JSON.parse(user.route) : user.route,
+                    points: routePoints,
+                };
+    
+                if (action === 'join' && incomingRoomId) {
+                    ws.current?.send(JSON.stringify({
+                        type: "JOIN_ROOM",
+                        payload: {
+                            ...payload,
+                            roomId: incomingRoomId,
+                        }
                     }));
-                    setUsers(updatedUsers);
                 } else {
-                    console.error("Received data.payload.users is not an object:", data.payload?.users);
+                    ws.current?.send(JSON.stringify({
+                        type: "CREATE_ROOM",
+                        payload
+                    }));
                 }
-            }
+            };
+    
+            ws.current.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                if (data.type === "CREATED_ROOM" || data.type === "JOINED_ROOM") {
+                    setRoomId(data.payload.roomId);
+                    setUserId(data.payload.userId);
+                }
+                else if (data.type === "UPDATED_ROOM") {
+                    if (data.payload?.users && typeof data.payload.users === 'object') {
+                        const updatedUsers = Object.entries(data.payload.users).map(([uid, user]: [string, any]) => ({
+                            ...user,
+                            route: typeof user.route === 'string' ? JSON.parse(user.route) : user.route,
+                        }));
+                        setUsers(updatedUsers);
+                    }
+                }
+            };
         };
-
-
-        return () => {
-            ws.current?.close();
-        };
-    }, [username]);
-
+    
+        connect();
+        return () => ws.current?.close();
+    }, [username, action, incomingRoomId]);
+    
     useEffect(() => {
         const sendLocation = async () => {
             if (!userId || !roomId || !ws.current || ws.current.readyState !== WebSocket.OPEN) return;
@@ -111,7 +143,7 @@ export default function LiveMapPage() {
         '#911eb4', '#46f0f0', '#f032e6', '#bcf60c', '#fabebe',
         '#008080', '#e6beff', '#9a6324', '#fffac8', '#800000'
     ];
-    
+
     const getColorForUserId = (userId: string) => {
         let hash = 0;
         for (let i = 0; i < userId.length; i++) {
@@ -120,6 +152,46 @@ export default function LiveMapPage() {
         const index = Math.abs(hash) % predefinedColors.length;
         return predefinedColors[index];
     };
+    const getUserIconIndex = (uid: string) => {
+        let hash = 0;
+        for (let i = 0; i < uid.length; i++) {
+            hash = uid.charCodeAt(i) + ((hash << 5) - hash);
+        }
+        const index = Math.abs(hash % 10) + 1; // range: 1 to 10
+        return index;
+    };
+
+    const fetchRoute = async (from: { latitude: number; longitude: number }, to: { latitude: number; longitude: number }) => {
+        const apiKey = "YOUR_GOOGLE_MAPS_API_KEY"; // replace or store securely
+        const response = await fetch(
+            `https://maps.googleapis.com/maps/api/directions/json?origin=${from.latitude},${from.longitude}&destination=${to.latitude},${to.longitude}&key=${apiKey}&mode=${mode || 'driving'}`
+        );
+        const data = await response.json();
+        const points = data.routes[0]?.overview_polyline?.points;
+        return points ? decodePolyline(points) : [];
+    };
+
+    function decodePolyline(encoded: any) {
+        let points = [];
+        let index = 0, lat = 0, lng = 0;
+        while (index < encoded.length) {
+            let b, shift = 0, result = 0;
+            do { b = encoded.charCodeAt(index++) - 63; result |= (b & 0x1f) << shift; shift += 5; } while (b >= 0x20);
+            let dlat = ((result & 1) ? ~(result >> 1) : (result >> 1));
+            lat += dlat;
+
+            shift = 0; result = 0;
+            do { b = encoded.charCodeAt(index++) - 63; result |= (b & 0x1f) << shift; shift += 5; } while (b >= 0x20);
+            let dlng = ((result & 1) ? ~(result >> 1) : (result >> 1));
+            lng += dlng;
+
+            points.push({ latitude: lat / 1e5, longitude: lng / 1e5 });
+        }
+        return points;
+    }
+
+
+
 
     return (
         <View style={{ flex: 1 }}>
@@ -127,11 +199,15 @@ export default function LiveMapPage() {
                 style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
                 initialRegion={initialRegion}
             >
-                <Marker
-                    coordinate={{ latitude: parseFloat(dlat as string), longitude: parseFloat(dlng as string) }}
-                    title="Destination"
-                    pinColor="blue"
-                />
+                <Marker coordinate={{ latitude: parseFloat(dlat as string), longitude: parseFloat(dlng as string) }}>
+                    <View style={{ width: 30, height: 30 }}>
+                        <Image
+                            source={require(`../assets/images/destination.png`)}
+                            style={{ width: '100%', height: '100%' }}
+                            resizeMode="contain"
+                        />
+                    </View>
+                </Marker>
 
                 {Object.entries(users).map(([uid, user]: any) => {
                     const userLocation = user.location ?? {
@@ -141,14 +217,19 @@ export default function LiveMapPage() {
 
                     const color = getColorForUserId(uid);
                     const points = user.points ? JSON.parse(user.points) : [];
-
+                    const iconIndex = getUserIconIndex(uid);
                     return (
                         <React.Fragment key={uid}>
-                            <Marker
-                                coordinate={userLocation}
-                                title={user.name}
-                                pinColor={uid === userId ? 'green' : 'red'}
-                            />
+
+                            <Marker coordinate={userLocation}>
+                                <View style={{ width: 30, height: 30 }}>
+                                    <Image
+                                        source={require(`../assets/images/usericon1.png`)}
+                                        style={{ width: '100%', height: '100%' }}
+                                        resizeMode="contain"
+                                    />
+                                </View>
+                            </Marker>
                             {points.length > 0 && (
                                 <Polyline
                                     coordinates={[

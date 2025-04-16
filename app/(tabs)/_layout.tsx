@@ -32,10 +32,10 @@ export default function Layout() {
             }}
           />
           <Tabs.Screen
-            name="recent"
+            name="join"
             options={{
-              title: 'Recent',
-              tabBarButton: (props: any) => <CustomTabButton {...props} icon="clock-o" label="Recent" />,
+              title: 'join',
+              tabBarButton: (props: any) => <CustomTabButton {...props} icon="clock-o" label="join" />,
             }}
           />
           <Tabs.Screen

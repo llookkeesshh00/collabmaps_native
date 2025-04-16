@@ -24,7 +24,8 @@ export default function CollabPage() {
                 slat,
                 slng,
                 dlat,
-                dlng
+                dlng,
+                action:"start"
             }
         });
     };
