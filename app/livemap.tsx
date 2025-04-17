@@ -32,6 +32,11 @@ export default function LiveMapPage() {
                     payload: {
                         name: username,
                         points: DecodedPoints,
+                        destination:
+                        {
+                            latitude: parseFloat(dlat as string),
+                            longitude: parseFloat(dlng as string),
+                        }
                     }
                 }));
             };
