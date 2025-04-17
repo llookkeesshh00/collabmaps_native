@@ -8,13 +8,13 @@ export default function JoinPage() {
 
     const handleJoin = () => {
         if (roomId && username) {
-          console.log("user in joiningpage")  
+          
           router.push({
                 pathname: '/livemap',
                 params: {
-                    username,
+                     username,
                     roomId,
-                    action:"join"
+                    
                 },
             });
         }
