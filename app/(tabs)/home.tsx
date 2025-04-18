@@ -24,7 +24,7 @@ const HomepageMap = () => {
   const [destination, setDestination] = useState<LatLng | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [isModalVisible, setIsModalVisible] = useState(false);
-  const [placeDetails, setPlaceDetails] = useState<{ name: string; address: string; photoUrls?: string[]; } | null>(null);
+  const [placeDetails, setPlaceDetails] = useState<{ name: string; address: string; photoUrls?: string[]; placeId?: string; } | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -94,6 +94,7 @@ const HomepageMap = () => {
       name: nameFromAutocomplete,
       address: formattedAddress,
       photoUrls,
+      placeId,
     });
   };
 
@@ -120,6 +121,18 @@ const HomepageMap = () => {
     }
   };
 
+  const handleCollabPress = async () => {
+    router.push({
+      pathname: '/collab',  
+      params: {
+        dlat: destination?.latitude,
+        dlng: destination?.longitude,
+        address : placeDetails?.address,
+        name : placeDetails?.name,
+        placeId: placeDetails?.placeId,
+      },
+    });
+  };
   return (
     <SafeAreaView style={{ flex: 1 }}>
       {/* your map and all content goes here */}
@@ -148,7 +161,22 @@ const HomepageMap = () => {
         </MapView>
         {/* this is for */}
         <TouchableOpacity style={styles.myLocationButton} onPress={handleMyLocationPress}>
-          <Image source={require('../../assets/images/my-location.png')} style={styles.myLocationIcon} />
+          <Image source={require('../../assets/images/my-location.png')} style={styles.asideIcon} />
+        </TouchableOpacity>
+
+        {/* Join Room floating button */}
+        <TouchableOpacity 
+          style={styles.joinRoomButton} 
+          onPress={() => {
+            router.push({
+              pathname: '/join',
+              params: {
+                slat: userLocation?.latitude,
+                slng: userLocation?.longitude,  
+          }})
+        }}
+        >
+          <Image source={require('../../assets/images/join-room.jpg')} style={styles.asideIcon} />
         </TouchableOpacity>
 
         {/* Bottom Popup Modal */}
@@ -200,6 +228,7 @@ const HomepageMap = () => {
                         slng: userLocation.longitude,
                         dlat: destination.latitude,
                         dlng: destination.longitude,
+                        from:"homepage",
                       },
                     })
 
@@ -207,27 +236,23 @@ const HomepageMap = () => {
                 }
                 }
               >
-                <Image source={require('../../assets/images/start.png')} style={styles.myLocationIcon} />
-                <Text style={styles.optionText}>Start</Text>
+                <Image source={require('../../assets/images/directions.png')} style={styles.asideIcon} />
+                <Text style={styles.optionText}>Directions</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
                 style={styles.optionButton}
-                onPress={() => {
-                  Alert.alert("Option 1", "Do something!");
-                  setIsModalVisible(false);
-                  ;
-                }}
+                onPress={() => {handleCollabPress()}}
               >
-                <Image source={require('../../assets/images/directions.png')} style={styles.myLocationIcon} />
-                <Text style={styles.optionText}>Directions</Text>
+                <Image source={require('../../assets/images/coolab.png')} style={styles.asideIcon} />
+                <Text style={styles.optionText}>Collab</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
                 style={[styles.optionButton, { backgroundColor: '#EEEEEE' }]}
                 onPress={() => { setIsModalVisible(false); }}
               >
-                <Image source={require('../../assets/images/close.png')} style={styles.myLocationIcon} />
+                <Image source={require('../../assets/images/close.png')} style={styles.asideIcon} />
                 <Text style={[styles.optionText, { color: 'black' }]}>Cancel</Text>
               </TouchableOpacity>
             </View>
@@ -267,11 +292,27 @@ const styles = StyleSheet.create({
     elevation: 5,
     zIndex: 5,
   },
-  myLocationIcon: {
+  joinRoomButton: {
+    position: 'absolute',
+    top: 145,
+    right: 15,
+    padding: 20,
+    backgroundColor: 'white',
+    borderRadius: 12,
+    width: 44,
+    height: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
+    zIndex: 5,
+  },
+  asideIcon: {
     width: 24,
     height: 24,
-
-
   },
   bottomModal: {
     justifyContent: 'flex-end',
@@ -299,6 +340,22 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     backgroundColor: '#2D79F4',
     borderRadius: 40,
+  },
+  joinButton: {
+    display: 'flex',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 5,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    backgroundColor: '#2D79F4',
+    borderRadius: 40,
+    position: 'absolute',
+    bottom: 20,
+    right: 20,
+    padding: 15,
+    shadowColor: '#000',
   },
   optionText: {
     color: 'white',

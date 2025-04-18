@@ -1,4 +1,4 @@
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, router } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, View, Image, Text, TouchableOpacity } from 'react-native';
 import MapView, { Marker, Polyline } from 'react-native-maps';
@@ -6,7 +6,6 @@ import axios from 'axios';
 import polyline from '@mapbox/polyline';
 import Constants from 'expo-constants';
 import Modal from 'react-native-modal'; // You need to install this package
-import { router } from 'expo-router';
 
 const GOOGLE_MAPS_API_KEY = Constants.expoConfig?.extra?.googleMapsApiKey;
 
@@ -23,7 +22,7 @@ type RouteInfo = {
 };
 
 export default function RouteScreen() {
-  const { slat, slng, dlat, dlng } = useLocalSearchParams();
+  const { username, slat, slng, dlat, dlng, placeId, from } = useLocalSearchParams();
   const [routes, setRoutes] = useState<RouteInfo[]>([]);
   const [selectedRoute, setSelectedRoute] = useState<RouteInfo | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
@@ -129,7 +128,38 @@ export default function RouteScreen() {
       console.error('Error fetching mode-specific data:', error);
     }
   };
-
+  const handleRoute =() => {
+    const routeData = modeRouteDetails || selectedRoute;
+    if (!routeData) return;
+  
+    const encodedCoords = JSON.stringify(routeData.coords);
+  
+    const commonParams = {
+      username,
+      slat: slat as string,
+      slng: slng as string,
+      dlat: dlat as string,
+      dlng: dlng as string,
+      placeId: placeId as string,
+      points: encodedCoords,
+      duration: routeData.duration.toString(),
+      distance: routeData.distance?.toString() || "0",
+      mode: selectedMode,
+    };
+  
+    setModalVisible(false);
+    if(from === 'livemap') {
+        router.push({
+          pathname: '/livemap',
+          params: commonParams,
+        });
+    }
+    else{
+      console.log('navigation under implementation');
+    };
+  }
+;
+  
 
   return (
     <View style={styles.container}>
@@ -240,33 +270,14 @@ export default function RouteScreen() {
               </View>
 
               <View className='flex flex-row gap-5 justify-center items-center'>
-                <TouchableOpacity style={styles.optionButton} onPress={() => {
-                  console.log(selectedRoute?.summary)
-                }} >
+                <TouchableOpacity 
+                  style={styles.optionButton} 
+                  onPress={() => {
+                    handleRoute();
+                  }}
+                >
                   <Image source={require('../assets/images/start.png')} style={styles.myLocationIcon} />
-                  <Text style={styles.optionText}>Start </Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.optionButtoncollab} onPress={() => {
-                  console.log("hii")
-                  if (modeRouteDetails ) {
-                    router.push({
-                      pathname: '/collab',
-                      params: {
-                        summary: selectedRoute.summary,
-                        duration: modeRouteDetails.duration.toString(),
-                        distance: modeRouteDetails.distance.toString(),
-                        mode: selectedMode,
-                        points: JSON.stringify(selectedRoute.coords),
-                        slat: source.latitude,
-                        slng: source.longitude,
-                        dlat: destination.latitude,
-                        dlng: destination.longitude
-                      }
-                    })
-                  }
-                }} >
-                  <Image source={require('../assets/images/coolab.png')} style={styles.myLocationIcon} />
-                  <Text style={styles.optionText}>Collab </Text>
+                  <Text style={styles.optionText}>{from === 'livemap' ? 'Select Route' : 'Start'}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={[styles.optionButton, { backgroundColor: '#EEEEEE' }]} onPress={() => { setModalVisible(false) }}     >
                   <Image source={require('../assets/images/close.png')} style={styles.myLocationIcon} />
@@ -296,18 +307,6 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 20,
     backgroundColor: '#2D79F4',
-    borderRadius: 40,
-  },
-  optionButtoncollab: {
-    marginTop: 15,
-    display: 'flex',
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 5,
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    backgroundColor: 'green',
     borderRadius: 40,
   },
   myLocationIcon: {
