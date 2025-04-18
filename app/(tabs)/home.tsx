@@ -122,6 +122,8 @@ const HomepageMap = () => {
   };
 
   const handleCollabPress = async () => {
+    // Close the modal before navigation
+    setIsModalVisible(false);
     router.push({
       pathname: '/collab',  
       params: {
@@ -133,6 +135,7 @@ const HomepageMap = () => {
       },
     });
   };
+
   return (
     <SafeAreaView style={{ flex: 1 }}>
       {/* your map and all content goes here */}
