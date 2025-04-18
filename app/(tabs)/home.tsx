@@ -244,7 +244,7 @@ const HomepageMap = () => {
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={styles.optionButton}
+                style={styles.optButton}
                 onPress={() => {handleCollabPress()}}
               >
                 <Image source={require('../../assets/images/coolab.png')} style={styles.asideIcon} />
@@ -342,6 +342,18 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 20,
     backgroundColor: '#2D79F4',
+    borderRadius: 40,
+  },
+  optButton: {
+    marginTop: 15,
+    display: 'flex',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 5,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    backgroundColor: 'green',
     borderRadius: 40,
   },
   joinButton: {

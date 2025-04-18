@@ -32,7 +32,7 @@ export type Room = {
 // Get WebSocket URL from app config or use default
 const getWebSocketUrl = () => {
   const configuredUrl = Constants.expoConfig?.extra?.websocketUrl;
-  return configuredUrl || 'ws://192.168.1.2:3001';
+  return configuredUrl || 'ws://192.168.31.7:3001';
 };
 
 class WebSocketService {

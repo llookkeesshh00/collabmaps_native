@@ -70,7 +70,7 @@ export default function RouteScreen() {
     };
 
     fetchRoutes();
-  }, [slat, slng, dlat, dlng,selectedMode]);
+  }, [slat, slng, dlat, dlng, selectedMode]);
 
   // Show loading indicator if no routes are found
   if (!routes.length) {
@@ -142,9 +142,9 @@ export default function RouteScreen() {
     if (from === 'livemap') {
       // Update the route in the WebSocket service
       const webSocketService = useWebSocket();
-      const {roomId, userId} = webSocketService.getRoomAndUserIds();
+      const { roomId, userId } = webSocketService.getRoomAndUserIds();
       if (userId) {
-          webSocketService.updateRoute(userId, {
+        webSocketService.updateRoute(userId, {
           points: routeData.coords,
           duration: routeData.duration.toString(),
           distance: routeData.distance?.toString() || '0',
@@ -178,13 +178,13 @@ export default function RouteScreen() {
     <View style={styles.container}>
       <MapView style={StyleSheet.absoluteFillObject} initialRegion={{ latitude: source.latitude, longitude: source.longitude, latitudeDelta: 0.05, longitudeDelta: 0.05 }}>
         <Marker coordinate={source}>
-          <View style={{ width: 50, height: 40 }}>
+          <View style={{ width: 30, height: 30 }}>
             <Image source={require('../assets/images/current.png')} style={{ width: '100%', height: '100%' }} resizeMode="contain" />
           </View>
         </Marker>
 
         <Marker coordinate={destination}>
-          <View style={{ width: 50, height: 30 }}>
+          <View style={{ width: 30, height: 30 }}>
             <Image source={require('../assets/images/destination.png')} style={{ width: '100%', height: '100%' }} resizeMode="contain" />
           </View>
         </Marker>
@@ -212,10 +212,38 @@ export default function RouteScreen() {
                 {/* Add buttons for selecting different modes */}
               </View>
               <View style={styles.routeDetailsContainer}>
-                <Text style={styles.routeDuration}>{(selectedRoute.duration / 60).toFixed(1)} min</Text>
-                <Text>{selectedRoute.summary}</Text>
-                <Text style={styles.routeDistance}>{(selectedRoute.distance / 1000).toFixed(1)} km</Text>
+                <View style={styles.infoRow}>
+                  <View style={styles.circleIconContainer}>
+                    <Image
+                      source={require('../assets/images/duration.png')}
+                      style={styles.icon}
+                    />
+                  </View>
+                  <Text style={{fontSize:26,color:'green'}}>{(selectedRoute.duration / 60).toFixed(1)} min</Text>
+                </View>
+                <View style={styles.infoRow}>
+                  <View style={styles.circleIconContainer}>
+                    <Image
+                      source={require('../assets/images/summary.png')}
+                      style={styles.icon}
+                    />
+                  </View>
+                  <Text>{selectedRoute.summary}</Text>
+                </View>
+
+                <View style={styles.infoRow}>
+                  <View style={styles.circleIconContainer}>
+                    <Image
+                      source={require('../assets/images/distance.png')}
+                      style={styles.icon}
+                    />
+                  </View>
+                  <Text style={styles.routeDistance}>
+                    {(selectedRoute.distance / 1000).toFixed(1)} km
+                  </Text>
+                </View>
               </View>
+
 
               <View style={styles.actionsContainer}>
                 <TouchableOpacity style={styles.optionButton} onPress={handleRoute}>
@@ -260,11 +288,34 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '500',
   },
+  infoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginVertical: 4,
+  },
+
+  circleIconContainer: {
+    width: 50,
+    height: 50,
+    borderRadius: 20,
+    backgroundColor: '#eee',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 8,
+    padding:10
+  },
+
   myLocationIcon: {
     width: 24,
     height: 24,
+    resizeMode: 'contain',
   },
-  selectedModeButton: {
+  icon:{
+    width: 30,
+    height: 30,
+  }
+  ,selectedModeButton: {
     borderRadius: 40,
     padding: 5,
     backgroundColor: '#A0F1F9',
@@ -276,8 +327,8 @@ const styles = StyleSheet.create({
   modalContent: {
     backgroundColor: '#fff',
     padding: 20,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    borderTopLeftRadius: 40,
+    borderTopRightRadius: 40,
   },
   modalTitle: {
     fontSize: 20,
@@ -285,10 +336,11 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   routeDetailsContainer: {
-    flexDirection: 'row',
+    flexDirection: 'column',
     gap: 10,
     justifyContent: 'space-between',
     marginBottom: 10,
+    // alignItems: ''
   },
   routeDuration: {
     fontSize: 26,
@@ -296,6 +348,7 @@ const styles = StyleSheet.create({
   },
   routeDistance: {
     color: '#2D79F4',
+    fontSize:26
   },
   actionsContainer: {
     flexDirection: 'row',
