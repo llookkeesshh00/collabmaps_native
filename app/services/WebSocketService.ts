@@ -96,7 +96,7 @@ class WebSocketService {
       this.socket.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
-          console.log(`WebSocket received:`, data.type);
+          console.log(`WebSocket received:`, data.type, data.payload ? JSON.stringify(data.payload).substring(0, 100) + '...' : '');
           
           // Update local room details for ANY message that contains room details in payload
           if (data.payload && (data.payload.users || data.payload.destination || data.payload.roomId)) {
@@ -132,62 +132,62 @@ class WebSocketService {
             this.roomId = data.payload.roomId;
           }
           
-          // Handle USER_LEFT events
-          if (data.type === 'USER_LEFT' && data.payload?.userWhoLeft) {
-            console.log('User left:', data.payload.userWhoLeft);
+          // Handle USER_LEFT events with enhanced payload (now includes username)
+          if (data.type === 'USER_LEFT' && data.payload?.userId) {
+            console.log('User left event received:', data.payload);
             
-            // Check if the user who left was the room creator
-            if (this.roomDetails && 
-                data.payload.userWhoLeft.userId === this.roomDetails.createdBy &&
-                this.userId !== this.roomDetails.createdBy) {
-              console.log('Room creator left, terminating room for all participants');
-              
-              // Notify UI that the creator left
-              const creatorLeftHandler = this.messageHandlers.get('CREATOR_LEFT');
-              if (creatorLeftHandler) {
-                creatorLeftHandler({
-                  creator: data.payload.userWhoLeft.name,
-                  roomId: this.roomId
-                });
-              }
-              
-              // Send terminate room message using the creator's ID
-              if (this.roomId) {
-                this.send('TERMINATE_ROOM', {
-                  userId: this.roomDetails.createdBy,
-                  roomId: this.roomId,
-                });
-                
-                this.stopLocationUpdates();
-                this.userId = null;
-                this.roomId = null;
-                this.roomDetails = null;
-              }
+            // The enhanced payload now contains username and userId
+            const userLeftHandler = this.messageHandlers.get('USER_LEFT');
+            if (userLeftHandler) {
+              console.log('Calling USER_LEFT handler with payload:', data.payload);
+              userLeftHandler({
+                userWhoLeft: {
+                  userId: data.payload.userId,
+                  name: data.payload.username || 'Unknown User'
+                },
+                users: data.payload.users || this.roomDetails?.users || {}
+              });
             } else {
-              // Just update local state by removing the user who left
-              if (this.roomDetails && this.roomDetails.users) {
-                delete this.roomDetails.users[data.payload.userWhoLeft.userId];
-                
-                // Notify UI about the user who left
-                const userLeftHandler = this.messageHandlers.get('USER_LEFT');
-                if (userLeftHandler) {
-                  userLeftHandler({
-                    ...data.payload,
-                    users: this.roomDetails.users // Send the updated users list
-                  });
-                }
-              }
+              console.log('No USER_LEFT handler registered');
+            }
+            
+            // Update our room details if users are provided in the payload
+            if (data.payload.users) {
+              this.updateLocalRoomDetails(data.payload);
+            } else if (this.roomDetails?.users && data.payload.userId) {
+              // Remove the user from our local state
+              delete this.roomDetails.users[data.payload.userId];
             }
           }
           
-          // Call the appropriate message handler
+          // Handle ROOM_TERMINATED event with minimal payload
+          if (data.type === 'ROOM_TERMINATED') {
+            console.log('Room terminated:', data.payload.roomId || this.roomId);
+            
+            // Clean up local state
+            this.stopLocationUpdates();
+            
+            // Call the ROOM_TERMINATED handler if registered
+            const terminatedHandler = this.messageHandlers.get('ROOM_TERMINATED');
+            if (terminatedHandler) {
+              terminatedHandler(data.payload);
+            }
+            
+            // Reset our state
+            this.userId = null;
+            this.roomId = null;
+            this.roomDetails = null;
+          }
+          
+          // Call the appropriate message handler for the message type
           const handler = this.messageHandlers.get(data.type);
           if (handler) {
             handler(data.payload);
           }
           
           // Since all messages with room details should update UI, trigger any UPDATED_ROOM handlers
-          if (data.payload && data.payload.users && data.type !== 'ERROR' && data.type !== 'USER_LEFT') {
+          if (data.payload && data.payload.users && data.type !== 'ERROR' && 
+              data.type !== 'USER_LEFT' && data.type !== 'ROOM_TERMINATED') {
             const updateHandler = this.messageHandlers.get('UPDATED_ROOM');
             if (updateHandler && data.type !== 'UPDATED_ROOM') {
               updateHandler(data.payload);
@@ -200,11 +200,14 @@ class WebSocketService {
 
       this.socket.onerror = (error) => {
         clearTimeout(timeoutId);
+        console.error('WebSocket error:', error);
+        reject(error);
       };
 
       this.socket.onclose = () => {
         this.stopLocationUpdates();
         this.socket = null;
+        console.log('WebSocket connection closed');
       };
     });
   }
@@ -320,20 +323,22 @@ class WebSocketService {
 
   leaveRoom() {
     if (this.userId && this.roomId) {
+      console.log(`Leaving room ${this.roomId} as user ${this.userId}`);
       this.send('LEAVE_ROOM', {
         userId: this.userId,
         roomId: this.roomId,
       });
+      this.stopLocationUpdates();
+      this.userId = null;
+      this.roomId = null;
+      this.lastJoinParams = null;
+      this.roomDetails = null;
     }
-    this.stopLocationUpdates();
-    this.userId = null;
-    this.roomId = null;
-    this.lastJoinParams = null;
-    this.roomDetails = null;
   }
 
   terminateRoom() {
     if (this.userId && this.roomId) {
+      console.log(`Terminating room ${this.roomId} as user ${this.userId}`);
       this.send('TERMINATE_ROOM', {
         userId: this.userId,
         roomId: this.roomId,
@@ -341,6 +346,7 @@ class WebSocketService {
       this.stopLocationUpdates();
       this.userId = null;
       this.roomId = null;
+      this.lastJoinParams = null;
       this.roomDetails = null;
     }
   }

@@ -3,14 +3,17 @@ import { View, Text, TouchableOpacity, StyleSheet, Image, Alert, ScrollView, Act
 import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
 import { useLocalSearchParams, router } from 'expo-router';
 import { useWebSocket } from './services/WebSocketService';
+import { useToast } from './components/ToastContext';
 import Modal from 'react-native-modal';
 import { Animated, Easing } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function LiveMapPage() {
     // Get parameters from URL
     const { username, slat, slng, dlat, dlng, placeId, points, duration, distance, mode } = useLocalSearchParams();
     const webSocketService = useWebSocket();
     const { roomId, userId } = webSocketService.getRoomAndUserIds() || { roomId: '', userId: '' };
+    const { showToast } = useToast();
 
     // Use refs for MapView to prevent unnecessary re-renders
     const mapRef = useRef(null);
@@ -81,8 +84,8 @@ export default function LiveMapPage() {
                         }
                     }
                     
-                    // Start sending regular location updates
-                    webSocketService.startLocationUpdates(5000);
+                    // Start sending regular location updates (changed from 5s to 1min)
+                    webSocketService.startLocationUpdates(60000);
                 } catch (error) {
                     console.error('Error fetching room details:', error);
                     Alert.alert("Error", "Failed to load room details. Please try again.");
@@ -112,6 +115,7 @@ export default function LiveMapPage() {
         // Create a universal handler for any message with room details
         const handleRoomUpdate = (payload: any) => {
             if (payload?.users) {
+                // Update state with all users
                 setUsers(payload.users);
                 
                 // When room details are updated, check if there are any routes to display
@@ -129,6 +133,27 @@ export default function LiveMapPage() {
             }
         };
 
+        // Handle JOIN_SUCCESS specifically to show toast for new users joining
+        const handleJoinSuccess = (payload: any) => {
+            if (payload?.users) {
+                // First update the users state
+                setUsers(payload.users);
+                
+                // Check if there's a new user who just joined (different from current user)
+                const newUserIds = Object.keys(payload.users).filter(uid => uid !== userId);
+                if (newUserIds.length > 0) {
+                    // Get the most recently joined user (assuming the last one in the list is newest)
+                    const lastJoinedUserId = newUserIds[newUserIds.length - 1];
+                    const newUser = payload.users[lastJoinedUserId];
+                    
+                    // Show toast notification for the new user
+                    if (newUser && newUser.name) {
+                        showToast(`${newUser.name} joined`, 'join');
+                    }
+                }
+            }
+        };
+
         // Handle user left event
         const handleUserLeft = (payload: any) => {
             if (payload?.userWhoLeft) {
@@ -139,11 +164,8 @@ export default function LiveMapPage() {
                     return newUsers;
                 });
                 
-                // Show notification that user left
-                Alert.alert(
-                    "User Left",
-                    `${payload.userWhoLeft.name} has left the room.`
-                );
+                // Show toast notification that user left
+                showToast(`${payload.userWhoLeft.name} left`, 'leave');
             } else if (payload?.users) {
                 // If payload includes users, update the state directly
                 setUsers(payload.users);
@@ -218,7 +240,7 @@ export default function LiveMapPage() {
 
         // Register handlers for ALL message types that contain room data
         const unsubscribeCreatedRoom = webSocketService.onMessage('CREATED_ROOM', handleRoomUpdate);
-        const unsubscribeJoinSuccess = webSocketService.onMessage('JOIN_SUCCESS', handleRoomUpdate);
+        const unsubscribeJoinSuccess = webSocketService.onMessage('JOIN_SUCCESS', handleJoinSuccess);
         const unsubscribeUpdatedLocation = webSocketService.onMessage('UPDATED_LOCATION', handleRoomUpdate);
         const unsubscribeUpdatedRoom = webSocketService.onMessage('UPDATED_ROOM', handleRoomUpdate);
         const unsubscribeUpdateRoute = webSocketService.onMessage('UPDATE_ROUTE', handleRouteUpdate);
@@ -246,8 +268,8 @@ export default function LiveMapPage() {
             }
         }
 
-        // Start location updates immediately
-        webSocketService.startLocationUpdates(5000);
+        // Start location updates immediately (changed from 5s to 1min)
+        webSocketService.startLocationUpdates(60000);
 
         // Clean up function
         return () => {
@@ -342,25 +364,43 @@ export default function LiveMapPage() {
 
     // Memoized callbacks
     const handleCloseRoom = useCallback(() => {
+        // Get room details to check if current user is the owner
+        if(roomId){
+        const roomDetails = webSocketService.getRoomDetails(roomId);
+        const isRoomOwner = roomDetails?.createdBy === userId;
+        
+        const actionText = isRoomOwner ? "terminate" : "leave";
+        const confirmTitle = isRoomOwner ? "Terminate Room" : "Leave Room";
+        const confirmMessage = isRoomOwner 
+            ? "Are you sure you want to terminate this room? All participants will be disconnected."
+            : "Are you sure you want to leave this room?";
+            
         Alert.alert(
-            "Leave Room",
-            "Are you sure you want to leave this room?",
+            confirmTitle,
+            confirmMessage,
             [
                 {
                     text: "Cancel",
                     style: "cancel"
                 },
                 {
-                    text: "Leave",
+                    text: isRoomOwner ? "Terminate" : "Leave",
                     onPress: () => {
-                        webSocketService.terminateRoom();
+                        if (isRoomOwner) {
+                            // If room owner, terminate the room
+                            webSocketService.terminateRoom();
+                        } else {
+                            // If participant, just leave the room
+                            webSocketService.leaveRoom();
+                        }
+                        // Navigate back to home screen
                         router.replace('/home');
                     },
                     style: "destructive"
                 }
             ]
         );
-    }, []);
+    }}, [roomId, userId]);
 
     const handleDirections = useCallback(() => {
         router.push({
@@ -591,7 +631,7 @@ export default function LiveMapPage() {
     }
 
     return (
-        <View style={{ flex: 1 }}>
+        <SafeAreaView style={{ flex: 1 }}>
 
             {/* Move participants button to top right corner */}
             <View style={styles.topRightContainer}>
@@ -804,7 +844,7 @@ export default function LiveMapPage() {
                 </Modal>
 
 
-        </View>
+        </SafeAreaView>
     );
 }
 
