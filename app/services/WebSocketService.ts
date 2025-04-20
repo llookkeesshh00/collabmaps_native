@@ -32,8 +32,8 @@ export type Room = {
 // Get WebSocket URL from app config or use default
 const getWebSocketUrl = () => {
   const configuredUrl = Constants.expoConfig?.extra?.websocketUrl;
-  return configuredUrl || 'ws://192.168.31.7:3001';
-};
+  return configuredUrl || 'https://9358-2401-4900-1cb0-bb23-f064-d61a-2b2c-75a7.ngrok-free.app';
+}
 
 class WebSocketService {
   private static instance: WebSocketService | null = null;
@@ -64,7 +64,6 @@ class WebSocketService {
 
   setServerUrl(url: string): void {
     this.serverUrl = url;
-    console.log(`WebSocket server URL set to: ${url}`);
   }
 
   getServerUrl(): string {
@@ -79,20 +78,17 @@ class WebSocketService {
     return new Promise((resolve, reject) => {
       const url = customUrl || this.serverUrl;
       this.serverUrl = url;
-      console.log(`Connecting to WebSocket server at: ${url}`);
 
       this.socket = new WebSocket(url);
 
       const timeoutId = setTimeout(() => {
         if (this.socket?.readyState !== WebSocket.OPEN) {
-          console.error(`WebSocket connection timeout to ${url}`);
           this.socket?.close();
           reject(new Error(`Connection timeout to ${url}`));
         }
       }, 10000);
 
       this.socket.onopen = () => {
-        console.log('WebSocket connection established');
         clearTimeout(timeoutId);
         resolve();
       };
@@ -100,27 +96,113 @@ class WebSocketService {
       this.socket.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
+          console.log(`WebSocket received:`, data.type);
           
-          // Update local room details if present in the payload
-          if (data.payload && (data.payload.users || data.payload.destination)) {
+          // Update local room details for ANY message that contains room details in payload
+          if (data.payload && (data.payload.users || data.payload.destination || data.payload.roomId)) {
             this.updateLocalRoomDetails(data.payload);
+            
+            // If we have roomId in payload but not locally, update it
+            if (data.payload.roomId && !this.roomId) {
+              this.roomId = data.payload.roomId;
+            }
+          }
+          
+          // Special handling for user ID assignment
+          if (data.type === 'USER_ID_ASSIGNED' && data.payload?.userId) {
+            this.userId = data.payload.userId;
+            
+            // If we were joining a room and now have user ID and room ID
+            if (this.lastJoinParams && this.roomId) {
+              // Create a JOIN_SUCCESS event with necessary data
+              const joinSuccessHandler = this.messageHandlers.get('JOIN_SUCCESS');
+              if (joinSuccessHandler) {
+                joinSuccessHandler({
+                  roomId: this.roomId,
+                  userId: this.userId,
+                  destination: this.roomDetails?.destination
+                });
+              }
+              this.lastJoinParams = null;
+            }
+          }
+          
+          // Handle specific room-related events
+          if ((data.type === 'JOIN_SUCCESS' || data.type === 'CREATED_ROOM') && data.payload?.roomId) {
+            this.roomId = data.payload.roomId;
+          }
+          
+          // Handle USER_LEFT events
+          if (data.type === 'USER_LEFT' && data.payload?.userWhoLeft) {
+            console.log('User left:', data.payload.userWhoLeft);
+            
+            // Check if the user who left was the room creator
+            if (this.roomDetails && 
+                data.payload.userWhoLeft.userId === this.roomDetails.createdBy &&
+                this.userId !== this.roomDetails.createdBy) {
+              console.log('Room creator left, terminating room for all participants');
+              
+              // Notify UI that the creator left
+              const creatorLeftHandler = this.messageHandlers.get('CREATOR_LEFT');
+              if (creatorLeftHandler) {
+                creatorLeftHandler({
+                  creator: data.payload.userWhoLeft.name,
+                  roomId: this.roomId
+                });
+              }
+              
+              // Send terminate room message using the creator's ID
+              if (this.roomId) {
+                this.send('TERMINATE_ROOM', {
+                  userId: this.roomDetails.createdBy,
+                  roomId: this.roomId,
+                });
+                
+                this.stopLocationUpdates();
+                this.userId = null;
+                this.roomId = null;
+                this.roomDetails = null;
+              }
+            } else {
+              // Just update local state by removing the user who left
+              if (this.roomDetails && this.roomDetails.users) {
+                delete this.roomDetails.users[data.payload.userWhoLeft.userId];
+                
+                // Notify UI about the user who left
+                const userLeftHandler = this.messageHandlers.get('USER_LEFT');
+                if (userLeftHandler) {
+                  userLeftHandler({
+                    ...data.payload,
+                    users: this.roomDetails.users // Send the updated users list
+                  });
+                }
+              }
+            }
           }
           
           // Call the appropriate message handler
           const handler = this.messageHandlers.get(data.type);
-          handler?.(data.payload);
+          if (handler) {
+            handler(data.payload);
+          }
+          
+          // Since all messages with room details should update UI, trigger any UPDATED_ROOM handlers
+          if (data.payload && data.payload.users && data.type !== 'ERROR' && data.type !== 'USER_LEFT') {
+            const updateHandler = this.messageHandlers.get('UPDATED_ROOM');
+            if (updateHandler && data.type !== 'UPDATED_ROOM') {
+              updateHandler(data.payload);
+            }
+          }
         } catch (error) {
           console.error('Error parsing WebSocket message:', error);
         }
       };
 
       this.socket.onerror = (error) => {
-        console.error('WebSocket error:', error);
         clearTimeout(timeoutId);
       };
 
       this.socket.onclose = () => {
-        console.warn('WebSocket connection closed');
         this.stopLocationUpdates();
         this.socket = null;
       };
@@ -215,8 +297,6 @@ class WebSocketService {
     if (payload.users) {
       this.roomDetails.users = payload.users;
     }
-    
-    console.log('Updated local room details:', this.roomDetails);
   }
 
   updateLocation(location: { latitude: number; longitude: number }) {
@@ -326,7 +406,7 @@ class WebSocketService {
   }
   
 
-  startLocationUpdates(intervalMs: number = 10000) {
+  startLocationUpdates(intervalMs: number = 60000) {
     this.stopLocationUpdates();
 
     this.locationInterval = setInterval(async () => {

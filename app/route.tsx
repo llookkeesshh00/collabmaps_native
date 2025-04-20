@@ -45,8 +45,6 @@ export default function RouteScreen() {
       try {
         const url = `https://maps.googleapis.com/maps/api/directions/json?origin=${slat},${slng}&destination=${destination.latitude},${destination.longitude}&mode=${selectedMode}&alternatives=true&key=${GOOGLE_MAPS_API_KEY}`;
         const response = await axios.get(url);
-        console.log(response.data);
-
         const routeList: RouteInfo[] = response.data.routes.map((route: any) => {
           const points = polyline.decode(route.overview_polyline.points);
           const coords = points.map(([lat, lng]: [number, number]) => ({

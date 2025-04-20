@@ -5,21 +5,6 @@ import { useLocalSearchParams, router } from 'expo-router';
 import { useWebSocket } from './services/WebSocketService';
 import Modal from 'react-native-modal';
 import { Animated, Easing } from 'react-native';
-// import React, { useEffect, useRef } from 'react';
-
-
-const userIcons = {
-    1: require('../assets/images/usericon1.png'),
-    2: require('../assets/images/usericon2.png'),
-    3: require('../assets/images/usericon3.png'),
-    4: require('../assets/images/usericon4.png'),
-    5: require('../assets/images/usericon5.png'),
-    6: require('../assets/images/usericon6.png'),
-    7: require('../assets/images/usericon7.png'),
-    8: require('../assets/images/usericon8.png'),
-    9: require('../assets/images/usericon9.png'),
-    10: require('../assets/images/usericon10.png'),
-} as const;
 
 export default function LiveMapPage() {
     // Get parameters from URL
@@ -76,8 +61,10 @@ export default function LiveMapPage() {
             if (roomId) {
                 try {
                     setIsLoading(true);
-                    // Use setRoomDetails instead of getRoomDetails as per the WebSocketService implementation
-                    const data = await webSocketService.setRoomDetails(roomId);
+                    // Use existing room details or request them once initially
+                    const data = webSocketService.getRoomDetails(roomId) || 
+                                 await webSocketService.setRoomDetails(roomId);
+                    
                     // Update state with room details (other users)
                     if (data && data.users) {
                         setUsers(data.users);
@@ -93,6 +80,9 @@ export default function LiveMapPage() {
                             });
                         }
                     }
+                    
+                    // Start sending regular location updates
+                    webSocketService.startLocationUpdates(5000);
                 } catch (error) {
                     console.error('Error fetching room details:', error);
                     Alert.alert("Error", "Failed to load room details. Please try again.");
@@ -106,30 +96,103 @@ export default function LiveMapPage() {
 
         fetchRoomDetails();
 
-        // Update own location on server
+        // Update own location on server immediately
         if (userId && roomId && isValidCoordinate(myLocation)) {
             webSocketService.updateLocation(myLocation);
         }
+        
+        return () => {
+            // Just clean up location updates on unmount
+            webSocketService.stopLocationUpdates();
+        };
     }, [roomId, userId, myLocation, isValidCoordinate]);
 
     // Set up message listeners for WebSocket updates
     useEffect(() => {
-        // Create message handler functions
-        const handleUpdatedRoom = (payload: any) => {
+        // Create a universal handler for any message with room details
+        const handleRoomUpdate = (payload: any) => {
             if (payload?.users) {
+                setUsers(payload.users);
+                
+                // When room details are updated, check if there are any routes to display
+                Object.entries(payload.users).forEach(([uid, user]: [string, any]) => {
+                    // Update our own route from other devices if relevant
+                    if (uid === userId && user.route?.points && !routeCoordinates) {
+                        setRouteCoordinates(user.route.points);
+                        setRouteInfo({
+                            duration: user.route.duration,
+                            distance: user.route.distance,
+                            mode: user.route.mode
+                        });
+                    }
+                });
+            }
+        };
+
+        // Handle user left event
+        const handleUserLeft = (payload: any) => {
+            if (payload?.userWhoLeft) {
+                // Update users state by removing the user who left
+                setUsers(prevUsers => {
+                    const newUsers = {...prevUsers};
+                    delete newUsers[payload.userWhoLeft.userId];
+                    return newUsers;
+                });
+                
+                // Show notification that user left
+                Alert.alert(
+                    "User Left",
+                    `${payload.userWhoLeft.name} has left the room.`
+                );
+            } else if (payload?.users) {
+                // If payload includes users, update the state directly
                 setUsers(payload.users);
             }
         };
 
+        // Handle case where room creator left
+        const handleCreatorLeft = (payload: any) => {
+            Alert.alert(
+                "Room Owner Left",
+                `${payload.creator} (the room owner) has left the room. The room will be closed.`,
+                [
+                    { 
+                        text: "OK", 
+                        onPress: () => {
+                            router.replace('/home');
+                        } 
+                    }
+                ]
+            );
+        };
+
+        // Special handler for route updates
         const handleRouteUpdate = (payload: any) => {
             if (payload?.userId && payload?.route) {
-                setUsers(prevUsers => ({
-                    ...prevUsers,
-                    [payload.userId]: {
+                // Update users state with the new route
+                setUsers(prevUsers => {
+                    const newUsers = { ...prevUsers };
+                    if (!newUsers[payload.userId]) {
+                        newUsers[payload.userId] = {};
+                    }
+                    
+                    newUsers[payload.userId] = {
                         ...(prevUsers[payload.userId] || {}),
                         route: payload.route
-                    }
-                }));
+                    };
+                    
+                    return newUsers;
+                });
+                
+                // If this is our route being updated from another device, update local route state
+                if (payload.userId === userId) {
+                    setRouteCoordinates(payload.route.points);
+                    setRouteInfo({
+                        duration: payload.route.duration,
+                        distance: payload.route.distance,
+                        mode: payload.route.mode
+                    });
+                }
             }
         };
 
@@ -137,9 +200,31 @@ export default function LiveMapPage() {
             Alert.alert("Error", payload.message || "Something went wrong");
         };
 
-        // Register message handlers - using ROOM_DETAILS instead of UPDATED_ROOM
-        const unsubscribeRoomDetails = webSocketService.onMessage('ROOM_DETAILS', handleUpdatedRoom);
-        const unsubscribeUpdateRoute = webSocketService.onMessage('UPDATE_ROUTE', handleUpdatedRoom); // This will also contain room details
+        // Handle room terminated event
+        const handleRoomTerminated = () => {
+            Alert.alert(
+                "Room Closed",
+                "This room has been terminated.",
+                [
+                    { 
+                        text: "OK", 
+                        onPress: () => {
+                            router.replace('/home');
+                        } 
+                    }
+                ]
+            );
+        };
+
+        // Register handlers for ALL message types that contain room data
+        const unsubscribeCreatedRoom = webSocketService.onMessage('CREATED_ROOM', handleRoomUpdate);
+        const unsubscribeJoinSuccess = webSocketService.onMessage('JOIN_SUCCESS', handleRoomUpdate);
+        const unsubscribeUpdatedLocation = webSocketService.onMessage('UPDATED_LOCATION', handleRoomUpdate);
+        const unsubscribeUpdatedRoom = webSocketService.onMessage('UPDATED_ROOM', handleRoomUpdate);
+        const unsubscribeUpdateRoute = webSocketService.onMessage('UPDATE_ROUTE', handleRouteUpdate);
+        const unsubscribeUserLeft = webSocketService.onMessage('USER_LEFT', handleUserLeft);
+        const unsubscribeCreatorLeft = webSocketService.onMessage('CREATOR_LEFT', handleCreatorLeft);
+        const unsubscribeRoomTerminated = webSocketService.onMessage('ROOM_TERMINATED', handleRoomTerminated);
         const unsubscribeError = webSocketService.onMessage('ERROR', handleError);
 
         // Handle incoming route if passed from route screen
@@ -155,23 +240,30 @@ export default function LiveMapPage() {
                         distance: distance as string,
                         mode: mode as string,
                     });
-                } else {
-                    console.log("userId not found error");
                 }
             } catch (err) {
                 console.error('Invalid route points:', err);
             }
         }
 
+        // Start location updates immediately
+        webSocketService.startLocationUpdates(5000);
+
         // Clean up function
         return () => {
             // Unsubscribe from all events
-            unsubscribeRoomDetails();
+            unsubscribeCreatedRoom();
+            unsubscribeJoinSuccess();
+            unsubscribeUpdatedLocation();
+            unsubscribeUpdatedRoom();
             unsubscribeUpdateRoute();
+            unsubscribeUserLeft();
+            unsubscribeCreatorLeft();
+            unsubscribeRoomTerminated();
             unsubscribeError();
-            webSocketService.disconnect(); // Clean up on unmount
+            webSocketService.stopLocationUpdates();
         };
-    }, [points, duration, distance, mode]);
+    }, [points, duration, distance, mode, userId, router]);
 
     // Update my location from the WebSocketService's room details
     useEffect(() => {
@@ -220,7 +312,6 @@ export default function LiveMapPage() {
 
     // Force render markers with delay for debugging
     useEffect(() => {
-        console.log('Setting up force render timer');
         const timer = setTimeout(() => {
             // Force a component update
             setIsLoading(false);
@@ -302,14 +393,6 @@ export default function LiveMapPage() {
         return colors[Math.abs(hash) % colors.length];
     }, []);
 
-    const getUserIcon = useCallback((uid: string) => {
-        let hash = 0;
-        for (let i = 0; i < uid.length; i++) {
-            hash = uid.charCodeAt(i) + ((hash << 5) - hash);
-        }
-        return userIcons[(Math.abs(hash) % 10 + 1) as keyof typeof userIcons];
-    }, []);
-
     // Find users at the same location and calculate offsets
     const getUserLocationOffsets = useCallback((currentUid: string) => {
         // Create a map of locations to user IDs
@@ -355,36 +438,79 @@ export default function LiveMapPage() {
     // Memoized markers for other users (from WebSocket data)
     const OtherUserMarkers = useMemo(() => {
         return Object.entries(users).map(([uid, user]) => {
-            // Skip current user as we show them separately from URL params
+            // Skip current user as we show them separately
             if (uid === userId) return null;
-
+            
             // Get user location from WebSocket data
-            const loc = user.location || null;
-            if (!loc || !isValidCoordinate(loc)) return null;
+            const loc = user.location;
+            
+            // Skip users without valid locations
+            if (!loc || 
+                loc.latitude === undefined || 
+                loc.longitude === undefined ||
+                !isValidCoordinate(loc)) {
+                return null;
+            }
 
             // Calculate offset if multiple users are at the same location
             const { latitudeOffset, longitudeOffset } = getUserLocationOffsets(uid);
+            
+            // Get a consistent color for this user
+            const userColor = getColorForUserId(uid);
 
             return (
-                <Marker key={uid} coordinate={{
-                    latitude: loc.latitude + latitudeOffset,
-                    longitude: loc.longitude + longitudeOffset
-                }} tracksViewChanges={false} onPress={() => {
-                    Alert.alert(
-                        user.name || "User",
-                        `Last updated: ${user.lastUpdated || "Unknown"}`
-                    );
-                }}>
-                    <View>
-                        <Image source={getUserIcon(uid)} style={{ width: 30, height: 30 }} resizeMode="contain" />
-                        <View style={styles.userNameBadge}>
-                            <Text style={styles.userNameText}>{user.name?.slice(0, 10) || 'User'}</Text>
+                <Marker 
+                    key={`user-marker-${uid}`}
+                    identifier={uid}
+                    coordinate={{
+                        latitude: loc.latitude + latitudeOffset,
+                        longitude: loc.longitude + longitudeOffset
+                    }}
+                    tracksViewChanges={true}
+                    onPress={() => {
+                        Alert.alert(
+                            user.name || "User",
+                            `Last updated: ${user.lastUpdated || "Unknown"}`
+                        );
+                    }}
+                >
+                    <View style={{ alignItems: 'center', width: 60 }}>
+                        {/* Colored dot instead of custom user icon */}
+                        <View style={{
+                            width: 24,
+                            height: 24,
+                            borderRadius: 12,
+                            backgroundColor: userColor,
+                            borderWidth: 3,
+                            borderColor: 'white',
+                            shadowColor: '#000',
+                            shadowOffset: { width: 0, height: 2 },
+                            shadowOpacity: 0.5,
+                            shadowRadius: 4,
+                            elevation: 5
+                        }} />
+                        
+                        {/* Better positioned name badge */}
+                        <View style={{
+                            backgroundColor: 'rgba(0,0,0,0.6)',
+                            paddingHorizontal: 5,
+                            paddingVertical: 3,
+                            borderRadius: 10,
+                            marginTop: 5,
+                            maxWidth: '100%'
+                        }}>
+                            <Text style={{
+                                color: 'white',
+                                fontSize: 10,
+                                fontWeight: 'bold',
+                                textAlign: 'center'
+                            }}>{user.name?.slice(0, 10) || 'User'}</Text>
                         </View>
                     </View>
                 </Marker>
             );
-        });
-    }, [users, userId, isValidCoordinate, getUserLocationOffsets, getUserIcon]);
+        }).filter(Boolean); // Filter out null markers
+    }, [users, userId, isValidCoordinate, getUserLocationOffsets, getColorForUserId]);
 
     // Routes from other users (WebSocket data)
     const OtherUserRoutes = useMemo(() => {
@@ -409,21 +535,24 @@ export default function LiveMapPage() {
     const MyRoute = useMemo(() => {
         if (!routeCoordinates) return null;
 
+        // Use the same color as assigned to the current user
+        const userColor = userId ? getColorForUserId(userId) : '#4D7BFF';
+
         return (
             <>
                 <Polyline
                     coordinates={routeCoordinates}
                     strokeWidth={10}
-                    strokeColor="rgba(77, 123, 255, 0.5)"
+                    strokeColor={`${userColor}80`} // Add 50% transparency
                 />
                 <Polyline
                     coordinates={routeCoordinates}
                     strokeWidth={5}
-                    strokeColor="#4D7BFF"
+                    strokeColor={userColor}
                 />
             </>
         );
-    }, [routeCoordinates]);
+    }, [routeCoordinates, userId, getColorForUserId]);
 
     // Loading indicator
     if (isLoading) {
@@ -464,46 +593,35 @@ export default function LiveMapPage() {
     return (
         <View style={{ flex: 1 }}>
 
-            <View style={{ flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                <View style={styles.usersCountContainer}>
-                    {/* Stack vertically here */}
-                    <View style={{ flexDirection: 'column', alignItems: 'center' }}>
-                        {/* Top row: icon + text + dot */}
-                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                            <Image source={require('../assets/images/team.png')} style={styles.routeInfoIcon} />
-                            <Text style={styles.usersCountText}> {Object.keys(users).length} in room</Text>
-                            <Animated.View
-                                style={{
-                                    width: 10,
-                                    height: 10,
-                                    borderRadius: 5,
-                                    backgroundColor: 'yellow',
-                                    marginLeft: 6,
-                                    transform: [{ scale: glowAnim }],
-                                    shadowColor: 'green',
-                                    shadowOffset: { width: 0, height: 0 },
-                                    shadowOpacity: 0.8,
-                                    shadowRadius: 6,
-                                    elevation: 5,
-                                }}
-                            />
-                        </View>
-
-                        {/* View button just below the text */}
-                        <TouchableOpacity
-                            onPress={() => {
-                                setIsModalVisible(true);
-                            }}
-                            style={[styles.participantsButton, { marginTop: 5 }]}
-                        >
-                            <Text style={styles.participantsButtonText}>View</Text>
-                        </TouchableOpacity>
-                    </View>
-                </View>
+            {/* Move participants button to top right corner */}
+            <View style={styles.topRightContainer}>
+                <TouchableOpacity
+                    onPress={() => {
+                        setIsModalVisible(true);
+                    }}
+                    style={styles.participantsButton}
+                >
+                    <Image source={require('../assets/images/team.png')} style={styles.routeInfoIcon} />
+                    <Text style={styles.participantsButtonText}>
+                        {Object.keys(users).length}
+                    </Text>
+                    <Animated.View
+                        style={{
+                            width: 8,
+                            height: 8,
+                            borderRadius: 4,
+                            backgroundColor: 'yellow',
+                            marginLeft: 4,
+                            transform: [{ scale: glowAnim }],
+                            shadowColor: 'green',
+                            shadowOffset: { width: 0, height: 0 },
+                            shadowOpacity: 0.8,
+                            shadowRadius: 6,
+                            elevation: 5,
+                        }}
+                    />
+                </TouchableOpacity>
             </View>
-
-
-
 
             <MapView
                 ref={mapRef}
@@ -524,7 +642,7 @@ export default function LiveMapPage() {
                     />
                 </Marker>
 
-                {/* MY USER MARKER - using proper user icon instead of current.png */}
+                {/* MY USER MARKER - using same color coding as other users */}
                 <Marker
                     coordinate={myCurrentLocation}
                     onPress={() => {
@@ -536,12 +654,24 @@ export default function LiveMapPage() {
                         }
                     }}
                 >
-                    <Image
-                        source={getUserIcon(userId || "me")}
-                        style={{ width: 40, height: 40 }}
-                    />
-                    <View style={styles.userNameBadge}>
-                        <Text style={styles.userNameText}>{username || "You"}</Text>
+                    <View style={{ alignItems: 'center' }}>
+                        {/* Use same color as in participants list for consistency */}
+                        <View style={{
+                            width: 28, // Slightly larger than other users
+                            height: 28,
+                            borderRadius: 14,
+                            backgroundColor: userId ? getColorForUserId(userId) : '#2D79F4',
+                            borderWidth: 3,
+                            borderColor: 'white',
+                            shadowColor: '#000',
+                            shadowOffset: { width: 0, height: 2 },
+                            shadowOpacity: 0.5,
+                            shadowRadius: 4,
+                            elevation: 5
+                        }} />
+                        <View style={[styles.userNameBadge, { marginTop: 5, position: 'relative', bottom: -5 }]}>
+                            <Text style={styles.userNameText}>{username || "You"}</Text>
+                        </View>
                     </View>
                 </Marker>
 
@@ -552,10 +682,6 @@ export default function LiveMapPage() {
                 {/* REPLACE OTHER USER MARKERS with enhanced version */}
                 {OtherUserMarkers}
             </MapView>
-
-            <TouchableOpacity style={styles.directionsButton} onPress={handleDirections}>
-                <Image source={require('../assets/images/directions.png')} style={styles.directionsIcon} />
-            </TouchableOpacity>
 
             <TouchableOpacity style={styles.toggleRoutesButton} onPress={toggleShowAllRoutes}>
                 <Image source={require('../assets/images/summary.png')} style={styles.directionsIcon} />
@@ -578,7 +704,21 @@ export default function LiveMapPage() {
                         <ScrollView style={{ maxHeight: 300, width: '100%' }}>
                             {Object.entries(users).map(([uid, user]) => (
                                 <View key={uid} style={styles.participantRow}>
-                                    <Image source={getUserIcon(uid)} style={styles.participantIcon} />
+                                    {/* Colored circle showing user's color instead of icon */}
+                                    <View style={{
+                                        width: 30,
+                                        height: 30,
+                                        borderRadius: 15,
+                                        backgroundColor: getColorForUserId(uid),
+                                        marginRight: 10,
+                                        borderWidth: 2,
+                                        borderColor: 'white',
+                                        shadowColor: '#000',
+                                        shadowOffset: { width: 0, height: 1 },
+                                        shadowOpacity: 0.3,
+                                        shadowRadius: 2,
+                                        elevation: 3
+                                    }} />
                                     <View style={{ flex: 1 }}>
                                         <Text style={styles.participantName}>{user.name || 'Unknown'}</Text>
                                         <Text style={styles.participantTimestamp}>
@@ -605,7 +745,6 @@ export default function LiveMapPage() {
                                             elevation: 5,
                                         }}
                                     />
-
                                 </View>
                             ))}
                         </ScrollView>
@@ -616,49 +755,53 @@ export default function LiveMapPage() {
                 </View>
             </Modal>
 
-            {routeCoordinates && (
+            
                 <Modal
                     isVisible={true}
                     backdropOpacity={0}
                     style={{ justifyContent: 'flex-end', margin: 0 }}
                     coverScreen={false}
                     hasBackdrop={false}
-                    useNativeDriver={true} // allow gestures to pass through
-
-
+                    useNativeDriver={true}
                 >
-
                     <View style={styles.bottomModalContainer}>
-                        <View style={{ alignItems: 'center' }}>
-                            <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#333' }}>Room ID:</Text>
-                            <Text selectable style={{ fontSize: 16, color: 'blue' }}>{roomId ?? "Creating..."}</Text>
+                        <View style={styles.roomInfoContainer}>
+                            <Text style={styles.roomIdLabel}>Room ID:</Text>
+                            <Text selectable style={styles.roomIdValue}>{roomId ?? "Creating..."}</Text>
                         </View>
-
-                        <View style={{ alignItems: 'center' }}>
-                            <Text style={{ fontSize: 26, fontWeight: 'bold', color: '#F74B00' }}>
-                                {formatDuration(parseInt(duration as string, 10))}
-                            </Text>
-                            <View style={{ flexDirection: 'row', gap: 10 }}>
-                                <Image source={require('../assets/images/distance.png')} style={styles.routeInfoIcon} />
-                                <Text style={{ fontSize: 15 }}>{(parseInt(routeInfo.distance as string) / 1000).toFixed(1)} km | </Text>
-                                <Image source={require('../assets/images/duration.png')} style={styles.routeInfoIcon} />
-                                <Text style={{ fontSize: 15 }}>{getArrivalTime(parseInt(duration as string, 10))}</Text>
-                            </View>
-                        </View>
-
-                        <TouchableOpacity
-                            onPress={() => {
-                                handleCloseRoom()
-                            }}
-                        >
-                            <View className="flex flex-row gap-3 items-center">
-                                <View style={styles.optionButtoncollab}>
-                                    <Image source={require('../assets/images/close.png')} style={styles.myLocationIcon} />
+                        
+                        {routeCoordinates ? (
+                            <View style={styles.routeInfoContainer}>
+                                <Text style={styles.durationText}>
+                                    {formatDuration(parseInt(duration as string, 10))}
+                                </Text>
+                                <View style={styles.routeDetailsRow}>
+                                    <Image source={require('../assets/images/distance.png')} style={styles.routeInfoIcon} />
+                                    <Text style={styles.routeDetailsText}>{(parseInt(routeInfo.distance as string) / 1000).toFixed(1)} km | </Text>
+                                    <Image source={require('../assets/images/duration.png')} style={styles.routeInfoIcon} />
+                                    <Text style={styles.routeDetailsText}>{getArrivalTime(parseInt(duration as string, 10))}</Text>
                                 </View>
                             </View>
+                        ) : (
+                            <View style={styles.emptyRouteContainer}>
+                                <TouchableOpacity 
+                                    style={styles.getDirectionsPrompt}
+                                    onPress={handleDirections}
+                                >
+                                    <Image source={require('../assets/images/directions.png')} style={styles.directionsPromptIcon} />
+                                    <Text style={styles.getDirectionsText}>Get Directions</Text>
+                                </TouchableOpacity>
+                            </View>
+                        )}
+
+                        <TouchableOpacity
+                            onPress={handleCloseRoom}
+                            style={styles.leaveRoomButton}
+                        >
+                            <Image source={require('../assets/images/close.png')} style={styles.myLocationIcon} />
                         </TouchableOpacity>
                     </View>
-                </Modal>)}
+                </Modal>
 
 
         </View>
@@ -837,15 +980,24 @@ const styles = StyleSheet.create({
         fontWeight: 'bold'
     },
     participantsButton: {
-        marginTop: 5,
-        backgroundColor: '#2D79F4',
-        paddingVertical: 5,
-        paddingHorizontal: 10,
-        borderRadius: 10
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: 'rgba(45, 121, 244, 0.85)',
+        paddingVertical: 8,
+        paddingHorizontal: 12,
+        borderRadius: 20,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.3,
+        shadowRadius: 3,
+        elevation: 4
     },
     participantsButtonText: {
         color: 'white',
-        fontWeight: 'bold'
+        fontWeight: 'bold',
+        fontSize: 14,
+        marginLeft: 6,
+        marginRight: 2
     },
     participantRoute: {
         fontSize: 12,
@@ -908,5 +1060,74 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.2,
         shadowRadius: 5,
         elevation: 10,
+    },
+    topRightContainer: {
+        position: 'absolute',
+        top: 50,
+        right: 16,
+        zIndex: 10,
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    roomInfoContainer: {
+        alignItems: 'center',
+    },
+    roomIdValue: {
+        fontSize: 16,
+        color: 'blue',
+    },
+    routeInfoContainer: {
+        alignItems: 'center',
+    },
+    durationText: {
+        fontSize: 26,
+        fontWeight: 'bold',
+        color: '#F74B00',
+    },
+    routeDetailsRow: {
+        flexDirection: 'row',
+        gap: 10,
+    },
+    routeDetailsText: {
+        fontSize: 15,
+    },
+    emptyRouteContainer: {
+        alignItems: 'center',
+    },
+    getDirectionsPrompt: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#2D79F4',
+        paddingVertical: 8,
+        paddingHorizontal: 15,
+        borderRadius: 20,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 3,
+        elevation: 3
+    },
+    getDirectionsText: {
+        fontSize: 16,
+        fontWeight: 'bold',
+        color: 'white',
+        marginLeft: 8
+    },
+    leaveRoomButton: {
+        flexDirection: 'row',
+        justifyContent: 'center',
+        alignItems: 'center',
+        gap: 5,
+        paddingVertical: 12,
+        paddingHorizontal: 12,
+        backgroundColor: '#E3E3E3',
+        borderRadius: 40,
+        borderWidth: 0,
+        borderColor: "gray",
+    },
+    directionsPromptIcon: {
+        width: 20,
+        height: 20,
+        tintColor: 'white'
     },
 });

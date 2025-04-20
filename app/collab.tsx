@@ -30,10 +30,56 @@ export default function CollabPage() {
       });
     })();
 
+    // Set up event handlers for room creation
+    createdHandlerRef.current = webSocketService.onMessage('CREATED_ROOM', (payload) => {
+      const { roomId } = payload;
+      
+      // Get the userId from the WebSocketService
+      const { userId } = webSocketService.getRoomAndUserIds() || {};
+      
+      if (!roomId) {
+        Alert.alert('Error', 'Invalid response from server.');
+        return;
+      }
+      
+      // Store room ID (userId should already be stored by USER_ID_ASSIGNED)
+      if (userId) {
+        webSocketService.setRoomAndUserIds(roomId, userId);
+      }
+
+      // Navigate to livemap
+      router.push({
+        pathname: '/livemap',
+        params: {
+          username,
+          roomId,
+          slat: userLocation?.latitude.toString() || "0",
+          slng: userLocation?.longitude.toString() || "0",
+          dlat: dlat as string,
+          dlng: dlng as string,
+        }
+      });
+    });
+    
+    // Add a specific handler for USER_ID_ASSIGNED
+    const userIdHandler = webSocketService.onMessage('USER_ID_ASSIGNED', (payload) => {
+      const { userId } = payload;
+      if (userId) {
+        // The room ID might be assigned later with CREATED_ROOM
+        webSocketService.setRoomAndUserIds(webSocketService.getRoomAndUserIds()?.roomId || '', userId);
+      }
+    });
+
+    // Handle any errors from server
+    errorHandlerRef.current = webSocketService.onMessage('ERROR', (payload) => {
+      Alert.alert('Error', payload.message || 'Failed to create room');
+    });
+
     // Cleanup WebSocket message listeners on unmount
     return () => {
       createdHandlerRef.current?.();
       errorHandlerRef.current?.();
+      userIdHandler?.();
     };
   }, []);
 
@@ -58,18 +104,44 @@ export default function CollabPage() {
       createdHandlerRef.current?.();
       errorHandlerRef.current?.();
 
+      // Store the roomId received from CREATED_ROOM event
+      let receivedRoomId = null;
+
       // Handle successful room creation
       createdHandlerRef.current = webSocketService.onMessage('CREATED_ROOM', (payload) => {
-        const { roomId, userId } = payload;
-
-        if (!roomId || !userId) {
-          Alert.alert('Error', 'Invalid response from server.');
-          return;
+        // Extract roomId from the payload
+        receivedRoomId = payload.roomId;
+        
+        // Store the room details that we've received
+        if (receivedRoomId) {
+          const userId = webSocketService.getRoomAndUserIds()?.userId;
+          
+          // If we already have a userId, we can navigate immediately
+          if (userId) {
+            webSocketService.setRoomAndUserIds(receivedRoomId, userId);
+            navigateToLiveMap(receivedRoomId);
+          }
         }
-        // Store room and user IDs
-        webSocketService.setRoomAndUserIds(roomId, userId);
+      });
 
-        // Navigate to livemap
+      // Add handler for USER_ID_ASSIGNED - this might come after CREATED_ROOM
+      const userIdHandler = webSocketService.onMessage('USER_ID_ASSIGNED', (payload) => {
+        const userId = payload.userId;
+        
+        if (userId) {
+          if (receivedRoomId) {
+            // If we already have a roomId, we can navigate now
+            webSocketService.setRoomAndUserIds(receivedRoomId, userId);
+            navigateToLiveMap(receivedRoomId);
+          } else {
+            // Just store the userId for now
+            webSocketService.setRoomAndUserIds('', userId);
+          }
+        }
+      });
+
+      // Helper function to navigate to LiveMap
+      const navigateToLiveMap = (roomId) => {
         router.push({
           pathname: '/livemap',
           params: {
@@ -81,7 +153,7 @@ export default function CollabPage() {
             dlng: dlng as string,
           }
         });
-      });
+      };
 
       // Handle any errors from server
       errorHandlerRef.current = webSocketService.onMessage('ERROR', (payload) => {
@@ -98,6 +170,13 @@ export default function CollabPage() {
         },
         placeId as string
       );
+
+      // Clean up on component unmount or when navigating away
+      return () => {
+        createdHandlerRef.current?.();
+        errorHandlerRef.current?.();
+        userIdHandler?.(); // Clean up USER_ID_ASSIGNED handler
+      };
 
     } catch (error) {
       console.error('Failed to create room:', error);

@@ -10,8 +10,9 @@ export default function JoinPage() {
   const [username, setUsername] = useState('');
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [showAdvanced, setShowAdvanced] = useState(false);
-  const [serverUrl, setServerUrl] = useState(Constants.expoConfig?.extra?.websocketUrl || 'ws://192.168.1.2:3001');
   const webSocketService = useWebSocket();
+  const websocketurl = webSocketService.getWebSocketUrl();
+  const [serverUrl, setServerUrl] = useState(websocketurl || 'ws://192.168.1.2:3001');
 
   // Store unsub functions to clean up old handlers
   const joinSuccessHandlerRef = useRef<() => void>();
@@ -66,18 +67,58 @@ export default function JoinPage() {
       joinSuccessHandlerRef.current?.();
       errorHandlerRef.current?.();
 
-      // Handle successful join
-      joinSuccessHandlerRef.current = webSocketService.onMessage('JOIN_SUCCESS', (payload) => {
-        const { roomId, userId, destination } = payload;
-
-        if (!roomId || !userId || !destination) {
-          Alert.alert('Error', 'Invalid join response from server.');
+      // First set up a handler for USER_ID_ASSIGNED
+      const userIdHandler = webSocketService.onMessage('USER_ID_ASSIGNED', (payload) => {
+        console.log('Got USER_ID_ASSIGNED in join.tsx:', payload);
+        if (payload && payload.userId) {
+          // Store userId immediately when received
+          webSocketService.setRoomAndUserIds(webSocketService.getRoomAndUserIds()?.roomId || roomId, payload.userId);
+        }
+      });
+      
+      // Set up a handler for both JOIN_SUCCESS
+      joinSuccessHandlerRef.current = webSocketService.onMessage('JOIN_SUCCESS', async (payload) => {
+        console.log('Got JOIN_SUCCESS in join.tsx:', payload);
+        const { roomId } = payload;
+        
+        if (!roomId) {
+          Alert.alert('Error', 'Invalid room ID in response from server.');
           return;
         }
+        
+        try {
+          // Store the roomId
+          const { userId } = webSocketService.getRoomAndUserIds() || {};
+          
+          if (!userId) {
+            console.log('No userId yet in JOIN_SUCCESS handler, waiting...');
+            // We'll wait for USER_ID_ASSIGNED to trigger navigation
+            return;
+          }
+          
+          console.log('Ready to navigate with roomId:', roomId, 'userId:', userId);
+          
+          // We have both roomId and userId, navigate to livemap
+          const roomDetails = webSocketService.getRoomDetails(roomId);
+          if (!roomDetails || !roomDetails.destination) {
+            console.error('Missing room details or destination');
+            Alert.alert('Error', 'Unable to get destination coordinates.');
+            return;
+          }
+          
+          navigateToLivemap(roomId, userId, roomDetails);
+        } catch (error) {
+          console.error('Error processing join success:', error);
+          Alert.alert('Error', 'Failed to process room details after joining.');
+        }
+      });
 
-        webSocketService.setRoomAndUserIds(roomId, userId);
-
-        // Redirect to livemap with necessary params
+      // Helper function for navigation
+      const navigateToLivemap = (roomId, userId, roomDetails) => {
+        // Start location updates immediately so others can see the joiner
+        webSocketService.startLocationUpdates(5000);
+        
+        // Navigate to livemap with necessary params
         router.push({
           pathname: '/livemap',
           params: {
@@ -85,13 +126,13 @@ export default function JoinPage() {
             roomId,
             slat: userLocation.latitude.toString(),
             slng: userLocation.longitude.toString(),
-            dlat: destination.latitude.toString(),
-            dlng: destination.longitude.toString(),
-            placeId: payload.placeId || 'default-place-id',
+            dlat: roomDetails.destination.latitude.toString(),
+            dlng: roomDetails.destination.longitude.toString(),
+            placeId: 'default-place-id', // Default placeId
             isJoining: 'true',
           },
         });
-      });
+      };
 
       // Handle join error
       errorHandlerRef.current = webSocketService.onMessage('ERROR', (payload) => {
@@ -99,7 +140,9 @@ export default function JoinPage() {
       });
 
       // Send JOIN_ROOM request
+      console.log('Sending JOIN_ROOM request:', roomId, username);
       webSocketService.joinRoom(roomId, username, userLocation);
+      
     } catch (error) {
       console.error('Failed to join room:', error);
       Alert.alert(
