@@ -32,9 +32,8 @@ export type Room = {
 // Get WebSocket URL from app config or use default
 const getWebSocketUrl = () => {
   const configuredUrl = Constants.expoConfig?.extra?.websocketUrl;
-  return configuredUrl || 'https://9358-2401-4900-1cb0-bb23-f064-d61a-2b2c-75a7.ngrok-free.app';
-}
-
+  return configuredUrl || 'https://6757-2409-40f0-d8-4815-b47e-47f6-7342-9360.ngrok-free.app';
+};
 class WebSocketService {
   private static instance: WebSocketService | null = null;
   private socket: WebSocket | null = null;

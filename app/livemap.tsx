@@ -6,7 +6,8 @@ import { useWebSocket } from './services/WebSocketService';
 import { useToast } from './components/ToastContext';
 import Modal from 'react-native-modal';
 import { Animated, Easing } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+// Import SafeAreaView from react-native instead of the context package
+import { SafeAreaView } from 'react-native';
 
 export default function LiveMapPage() {
     // Get parameters from URL
@@ -85,7 +86,7 @@ export default function LiveMapPage() {
                     }
                     
                     // Start sending regular location updates (changed from 5s to 1min)
-                    webSocketService.startLocationUpdates(60000);
+                    webSocketService.startLocationUpdates(1000);
                 } catch (error) {
                     console.error('Error fetching room details:', error);
                     Alert.alert("Error", "Failed to load room details. Please try again.");
