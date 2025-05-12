@@ -1,76 +1,79 @@
 import { Tabs } from 'expo-router';
-import { Text, TouchableOpacity, View } from 'react-native';
-import { FontAwesome } from '@expo/vector-icons';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { StatusBar } from 'expo-status-bar';
+import { useColorScheme } from 'react-native';
+import FontAwesome from '@expo/vector-icons/FontAwesome';
+import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import { useRoomStore } from '../stores';
 
-export default function Layout() {
-  return (
-    <SafeAreaProvider >
-        <StatusBar translucent backgroundColor="transparent"  />
-      <View style={{ flex: 1, backgroundColor: '#fff',borderRadius:20 }}>
+// Define types for tab bar icon props
+type TabBarIconProps = {
+  color: string;
+  size?: number;
+};
 
-        <Tabs
-          initialRouteName="home"
-          tabBarHideOnKeyboard={true}
-          screenOptions={{
-            headerShown: false,
-            tabBarStyle: {
-              backgroundColor: '#F3F3F3',
-              height: 60,
-              borderTopWidth: 0,
-              elevation: 5,
-              shadowOpacity: 0.1,
-            },
-          }}
-        >
-          <Tabs.Screen
-            name="home"
-            options={{
-              title: 'Home Page',
-              tabBarButton: (props: any) => <CustomTabButton {...props} icon="home" label="Home" />,
-            }}
-          />
-          <Tabs.Screen
-            name="join"
-            options={{
-              title: 'join',
-              tabBarButton: (props: any) => <CustomTabButton {...props} icon="clock-o" label="join" />,
-            }}
-          />
-          <Tabs.Screen
-            name="profile"
-            options={{
-              title: 'Profile',
-              tabBarButton: (props: any) => <CustomTabButton {...props} icon="user" label="Profile" />,
-            }}
-          />
-        </Tabs>
-      </View>
-    </SafeAreaProvider>
-  );
+/**
+ * You can explore the built-in icon families and icons on the web at https://icons.expo.fyi/
+ */
+function TabBarIcon(props: {
+  name: React.ComponentProps<typeof FontAwesome>['name'];
+  color: string;
+}) {
+  return <FontAwesome size={24} style={{ marginBottom: -3 }} {...props} />;
 }
 
-const CustomTabButton = ({
-  onPress,
-  icon,
-  label,
-}: {
-  onPress: () => void;
-  icon: keyof typeof FontAwesome.glyphMap;
-  label: string;
-}) => {
+export default function TabLayout() {
+  const colorScheme = useColorScheme();
+
   return (
-    <TouchableOpacity
-      onPress={onPress}
-      style={{
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
+    <Tabs
+      screenOptions={{
+        headerShown: false,
+        tabBarActiveTintColor: '#2563EB',
+        tabBarInactiveTintColor: '#6B7280',
+        tabBarStyle: {
+          backgroundColor: colorScheme === 'dark' ? '#1F2937' : '#FFFFFF',
+          borderTopColor: colorScheme === 'dark' ? '#374151' : '#E5E7EB',
+        },
+        headerStyle: {
+          backgroundColor: colorScheme === 'dark' ? '#111827' : '#F9FAFB',
+        },
+        headerTintColor: colorScheme === 'dark' ? '#FFFFFF' : '#1F2937',
+        headerTitleStyle: {
+          fontWeight: '600',
+        },
       }}
-    >
-      <FontAwesome name={icon} size={22} color="#333" />
-      <Text style={{ fontSize: 11, color: '#333', marginTop: 2 }}>{label}</Text>
-    </TouchableOpacity>
+    >      <Tabs.Screen
+        name="home"
+        options={{
+          title: 'Map',
+          headershown: false,
+          tabBarIcon: ({ color }: TabBarIconProps) => (
+            <MaterialIcons name="map" size={24} color={color} />
+          ),
+        }}
+      />
+
+      <Tabs.Screen
+        name="room"
+        options={{
+          headershown: false,
+          title: 'Room',
+          tabBarIcon: ({ color }: TabBarIconProps) => (
+            <FontAwesome5 name="users" size={22} color={color} />
+          ),
+        }}
+      />
+
+      <Tabs.Screen
+        name="profile"
+        options={{
+          headershown: false,
+          title: 'Profile',
+          tabBarIcon: ({ color }: TabBarIconProps) => (
+            <FontAwesome name="user" size={24} color={color} />
+          ),
+        }}
+      />
+    </Tabs>
   );
-};
+}

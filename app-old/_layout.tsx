@@ -1,16 +1,17 @@
 import * as expoCrypto from 'expo-crypto';
-import { Stack, ErrorBoundary } from 'expo-router';
-import React, { useEffect } from 'react';
+import { Stack } from 'expo-router';
+import React from 'react';
+import './global.css';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useFonts } from 'expo-font';
 import { SplashScreen } from 'expo-router';
-import { View } from 'react-native';
-import { useUserStore } from './stores';
+import { useEffect } from 'react';
+import { useColorScheme, View } from 'react-native';
+import { ToastProvider } from './components/ToastContext';
 
-// Apply the crypto polyfill for environments that don't have it
 if (typeof global.crypto === 'undefined') {
   global.crypto = {
     getRandomValues: <T extends ArrayBufferView | null>(array: T): T => {
@@ -22,11 +23,11 @@ if (typeof global.crypto === 'undefined') {
       view.set(randomBytes);
       return array;
     },
+    // Add minimal stubs to satisfy the Crypto interface
     subtle: {} as Crypto['subtle'],
     randomUUID: () => crypto.randomUUID(), // Fallback or throw error if not supported
   } as Crypto;
 }
-
 console.log('Crypto polyfill applied for environments without native support.');
 
 export {
@@ -43,16 +44,10 @@ export const unstable_settings = {
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
-  const { isInitialized, initialize, user } = useUserStore();
   const [loaded, error] = useFonts({
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
     ...FontAwesome.font,
   });
-
-  // Initialize user from AsyncStorage
-  useEffect(() => {
-    initialize();
-  }, []);
 
   // Expo Router uses Error Boundaries to catch errors in the navigation tree.
   useEffect(() => {
@@ -60,30 +55,33 @@ export default function RootLayout() {
   }, [error]);
 
   useEffect(() => {
-    if (loaded && isInitialized) {
+    if (loaded) {
       SplashScreen.hideAsync();
     }
-  }, [loaded, isInitialized]);
+  }, [loaded]);
 
-  if (!loaded || !isInitialized) {
+  if (!loaded) {
     return null;
   }
+
+  return <RootLayoutNav />;
+}
+
+function RootLayoutNav() {
+  const colorScheme = useColorScheme();
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
-        <Stack screenOptions={{ headerShown: false }}>
-          {/* Show authentication screens if no user, otherwise show main app */}
-          {!user ? (
-            <Stack.Screen name="screens/onboarding/CreateUserScreen" options={{ headerShown: false }} />
-          ) : (
-            <>
-              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-              <Stack.Screen name="screens/room/RoomScreen" options={{ headerShown: false }} />
-            </>
-          )}
-        </Stack>
-        <StatusBar style="auto" />
+        <ToastProvider>
+          <Stack>
+            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            <Stack.Screen name="collab" options={{ headerShown: false }} />
+            <Stack.Screen name="route" options={{ headerShown: false }} />
+            <Stack.Screen name="livemap" options={{ headerShown: false }} />
+          </Stack>
+          <StatusBar style="auto" />
+        </ToastProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );
