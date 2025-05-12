@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Constants from 'expo-constants';
 import { SearchStore, SearchedPlace, GooglePlaceData, GooglePlaceDetail, MapMarker } from '@/app/types';
 import { Location } from '@/app/types';
 
@@ -41,8 +42,7 @@ export const useSearchStore = create<SearchStore>()(
             selectedPlace: place, // Also set as selected place
           };
         });
-      },
-        /**
+      },      /**
        * Convert Google Places data to our SearchedPlace format and add to recent searches
        * @param placeData Data from Google Places Autocomplete
        * @param placeDetail Optional place details with more information
@@ -57,7 +57,17 @@ export const useSearchStore = create<SearchStore>()(
             latitude: placeDetail.geometry.location.lat,
             longitude: placeDetail.geometry.location.lng
           } : undefined,
-          timestamp: Date.now()
+          timestamp: Date.now(),
+          // Save additional place details if available
+          formattedAddress: placeDetail?.formatted_address,
+          placeTypes: placeDetail?.types,
+          rating: placeDetail?.rating,
+          priceLevel: placeDetail?.price_level,
+          // Process photos if available
+          photoUrls: placeDetail?.photos ? 
+            placeDetail.photos.slice(0, 5).map(photo => 
+              `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=${photo.photo_reference}&key=${Constants.expoConfig?.extra?.googleMapsApiKey}`
+            ) : undefined
         };
         
         set((state) => {

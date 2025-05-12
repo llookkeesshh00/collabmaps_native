@@ -26,6 +26,32 @@ export interface GooglePlaceDetail {
   };
   formatted_address: string;
   name: string;
+  photos?: Array<{
+    height: number;
+    html_attributions: string[];
+    photo_reference: string;
+    width: number;
+  }>;
+  types?: string[];
+  rating?: number;
+  price_level?: number;
+  place_id?: string;
+  international_phone_number?: string;
+  website?: string;
+  opening_hours?: {
+    open_now?: boolean;
+    periods?: Array<{
+      close?: {
+        day: number;
+        time: string;
+      };
+      open?: {
+        day: number;
+        time: string;
+      };
+    }>;
+    weekday_text?: string[];
+  };
 }
 
 /**
@@ -38,6 +64,11 @@ export interface SearchedPlace {
   address: string;          // Secondary text (address/location description)
   location?: Location;      // Coordinates, may not be available until fetched
   timestamp?: number;       // When this place was searched
+  photoUrls?: string[];     // Photo URLs for the place (from place details)
+  formattedAddress?: string; // Full formatted address from Google
+  placeTypes?: string[];    // Types of the place (restaurant, cafe, etc.)
+  rating?: number;          // Place rating if available
+  priceLevel?: number;      // Price level (1-4) if available
 }
 
 /**
