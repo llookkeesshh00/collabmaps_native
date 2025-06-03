@@ -162,24 +162,8 @@ const HomepageMap = () => {
         >
           {destination && <Marker coordinate={destination} title="Destination" />}
         </MapView>
-        {/* this is for */}
-        <TouchableOpacity style={styles.myLocationButton} onPress={handleMyLocationPress}>
+          <TouchableOpacity style={styles.myLocationButton} onPress={handleMyLocationPress}>
           <Image source={require('../../assets/images/my-location.png')} style={styles.asideIcon} />
-        </TouchableOpacity>
-
-        {/* Join Room floating button */}
-        <TouchableOpacity 
-          style={styles.joinRoomButton} 
-          onPress={() => {
-            router.push({
-              pathname: '/join',
-              params: {
-                slat: userLocation?.latitude,
-                slng: userLocation?.longitude,  
-          }})
-        }}
-        >
-          <Image source={require('../../assets/images/join-room.jpg')} style={styles.asideIcon} />
         </TouchableOpacity>
 
         {/* Bottom Popup Modal */}
@@ -194,10 +178,10 @@ const HomepageMap = () => {
               <>
                 <Text style={styles.modalTitle}>{placeDetails.name}</Text>
                 <Text className='text-gray-600 mb-6'>{placeDetails.address}</Text>
-                {placeDetails.photoUrls?.length > 0 && (
+                {placeDetails.photoUrls && placeDetails.photoUrls.length > 0 && (
                   <View style={{ height: 150, marginBottom: 10 }}>
                     <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                      {placeDetails.photoUrls.map((url, index) => (
+                      {placeDetails.photoUrls?.map((url, index) => (
                         <Image
                           key={index}
                           source={{ uri: url }}
@@ -276,28 +260,9 @@ const styles = StyleSheet.create({
     zIndex: 10,
     alignItems: 'center',
   },
-  map: { flex: 1 },
-  myLocationButton: {
+  map: { flex: 1 },  myLocationButton: {
     position: 'absolute',
     top: 88,
-    right: 15,
-    padding: 20,
-    backgroundColor: 'white',
-    borderRadius: 12,
-    width: 44,
-    height: 44,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 5,
-    zIndex: 5,
-  },
-  joinRoomButton: {
-    position: 'absolute',
-    top: 145,
     right: 15,
     padding: 20,
     backgroundColor: 'white',

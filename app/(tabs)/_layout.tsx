@@ -12,9 +12,9 @@ export default function Layout() {
 
         <Tabs
           initialRouteName="home"
-          tabBarHideOnKeyboard={true}
           screenOptions={{
             headerShown: false,
+            tabBarHideOnKeyboard: true,
             tabBarStyle: {
               backgroundColor: '#F3F3F3',
               height: 60,
@@ -36,13 +36,6 @@ export default function Layout() {
             options={{
               title: 'join',
               tabBarButton: (props: any) => <CustomTabButton {...props} icon="clock-o" label="join" />,
-            }}
-          />
-          <Tabs.Screen
-            name="profile"
-            options={{
-              title: 'Profile',
-              tabBarButton: (props: any) => <CustomTabButton {...props} icon="user" label="Profile" />,
             }}
           />
         </Tabs>
