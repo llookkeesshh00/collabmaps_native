@@ -16,7 +16,10 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
 import { useSearchStore } from '@/app/stores';
+import { placeService } from '@/app/services';
 import { SearchedPlace, GooglePlaceData, GooglePlaceDetail } from '@/app/types';
+import RecentSearchItem from '../Search/RecentSearchItem';
+import SuggestionItem from '../Search/SuggestionItem';
 
 interface SearchBarProps {
     onPlaceSelected?: (place: SearchedPlace) => void;
@@ -100,216 +103,77 @@ const SearchBar = ({ onPlaceSelected }: SearchBarProps) => {
         setIsFocused(false);
         setSearchActive(false);
         Keyboard.dismiss();
-    };
-
-    const handleInputChange = (text: string) => {
+    };    const handleInputChange = (text: string) => {
         setInputEmpty(text.trim() === '');
-    };    const renderRecentItem = ({ item }: { item: SearchedPlace }) => (
-        <TouchableOpacity
-            style={styles.recentItem}
-            onPress={() => {
-                if (!item.location) return; // Ensure location exists for recent searches
+    };
+    
+    const handleRecentItemPress = (item: SearchedPlace) => {
+        if (!item.location) return; // Ensure location exists for recent searches
 
-                searchRef.current?.setAddressText(item.name);
-                
-                // When selecting recent search, either use existing details or fetch fresh ones
-                if (item.photoUrls && item.formattedAddress) {
-                    // If we already have detailed data, reuse it
-                    addPlaceFromGoogleData(
-                        {
-                            place_id: item.placeId,
-                            description: item.name,
-                            structured_formatting: {
-                                main_text: item.name,
-                                secondary_text: item.address,
-                            },
-                        },
-                        {
-                            geometry: {
-                                location: {
-                                    lat: item.location.latitude,
-                                    lng: item.location.longitude,
-                                },
-                            },
-                            formatted_address: item.formattedAddress || item.address,
-                            name: item.name,
-                            photos: item.photoUrls ? item.photoUrls.map(url => {
-                                const photoRef = url.split('photoreference=')[1]?.split('&')[0];
-                                return {
-                                    photo_reference: photoRef,
-                                    height: 400,
-                                    width: 400,
-                                    html_attributions: []
-                                };
-                            }) : undefined,
-                            rating: item.rating,
-                            types: item.placeTypes,
-                            price_level: item.priceLevel
+        searchRef.current?.setAddressText(item.name);
+        
+        // When selecting recent search, either use existing details or fetch fresh ones
+        if (item.photoUrls && item.formattedAddress) {
+            // If we already have detailed data, reuse it
+            const placeData = placeService.createPlaceDataFromSearchedPlace(item);
+            const placeDetails = placeService.createPlaceDetailFromSearchedPlace(item);
+            
+            if (placeDetails) {
+                addPlaceFromGoogleData(placeData, placeDetails);
+            }
+        } else {
+            // If we don't have detailed data, fetch it again
+            placeService.fetchPlaceDetails(item.placeId)
+                .then(details => {
+                    if (details) {
+                        const placeData = placeService.createPlaceDataFromSearchedPlace(item);
+                        addPlaceFromGoogleData(placeData, details);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching place details:', error);
+                    // Fall back to basic info if fetch fails
+                    if (item.location) {
+                        const placeData = placeService.createPlaceDataFromSearchedPlace(item);
+                        const placeDetails = placeService.createPlaceDetailFromSearchedPlace(item);
+                        
+                        if (placeDetails) {
+                            addPlaceFromGoogleData(placeData, placeDetails);
                         }
-                    );
-                } else {
-                    // If we don't have detailed data, fetch it again
-                    fetch(`https://maps.googleapis.com/maps/api/place/details/json?place_id=${item.placeId}&fields=geometry,formatted_address,name,photos,types,rating,price_level,international_phone_number,website,opening_hours&key=${GOOGLE_MAPS_API_KEY}`)
-                        .then(response => response.json())
-                        .then(data => {
-                            if (data.result) {
-                                const details: GooglePlaceDetail = {
-                                    geometry: {
-                                        location: {
-                                            lat: item.location?.latitude || data.result.geometry.location.lat,
-                                            lng: item.location?.longitude || data.result.geometry.location.lng,
-                                        }
-                                    },
-                                    formatted_address: data.result.formatted_address,
-                                    name: data.result.name,
-                                    photos: data.result.photos,
-                                    types: data.result.types,
-                                    rating: data.result.rating,
-                                    price_level: data.result.price_level,
-                                    international_phone_number: data.result.international_phone_number,
-                                    website: data.result.website,
-                                    opening_hours: data.result.opening_hours,
-                                };                                        addPlaceFromGoogleData(
-                                    {
-                                        place_id: item.placeId,
-                                        description: item.name,
-                                        structured_formatting: {
-                                            main_text: item.name,
-                                            secondary_text: item.address,
-                                        },
-                                    },
-                                    details
-                                );
+                    }
+                });
+        }
+
+        if (onPlaceSelected) {
+            onPlaceSelected(item);
+        }
+
+        Keyboard.dismiss();
+        setIsFocused(false);
+    };
+    
+    const renderRecentItem = ({ item }: { item: SearchedPlace }) => (
+        <RecentSearchItem item={item} onPress={handleRecentItemPress} />
+    );const renderSuggestion = (row: GooglePlaceData, index: number) => (
+        <SuggestionItem 
+            suggestion={row} 
+            onPress={() => {
+                if (searchRef.current) {
+                    // First set the address text to show in the input
+                    searchRef.current.setAddressText(row.description);
+                    
+                    // Fetch place details
+                    placeService.fetchPlaceDetails(row.place_id)
+                        .then(details => {
+                            if (details) {
+                                handlePlaceSelect(row, details);
                             }
                         })
-                        .catch(error => {
-                            console.error('Error fetching place details:', error);
-                            // Fall back to basic info if fetch fails
-                            // We can safely use item.location here because we check for its existence at the start of the function
-                            if (item.location) {
-                                addPlaceFromGoogleData(
-                                    {
-                                        place_id: item.placeId,
-                                        description: item.name,
-                                        structured_formatting: {
-                                            main_text: item.name,
-                                            secondary_text: item.address,
-                                        },
-                                    },
-                                    {
-                                        geometry: {
-                                            location: {
-                                                lat: item.location.latitude,
-                                                lng: item.location.longitude,
-                                            },
-                                        },
-                                        formatted_address: item.address,
-                                        name: item.name,
-                                    }
-                                );
-                            }
-                        });
+                        .catch(error => console.error('Error fetching place details:', error));
                 }
-
-                if (onPlaceSelected) {
-                    onPlaceSelected(item);
-                }
-
-                Keyboard.dismiss();
-                setIsFocused(false);
-            }}
-        >
-            <Ionicons
-                name="time-outline"
-                size={22}
-                color="#555"
-                style={styles.recentIcon}
-            />
-            <View style={styles.recentTextContainer}>
-                <Text style={styles.recentItemTitle} numberOfLines={1}>
-                    {item.name}
-                </Text>
-                <Text style={styles.recentItemSubtitle} numberOfLines={1}>
-                    {item.address}
-                </Text>
-            </View>
-        </TouchableOpacity>
-    );    const renderSuggestion = (row: GooglePlaceData, index: number) => {
-        const mainText =
-            row.structured_formatting?.main_text ||
-            row.description.split(',')[0];
-        const secondaryText =
-            row.structured_formatting?.secondary_text ||
-            row.description.split(',').slice(1).join(',').trim();
-        return (
-            <View style={styles.suggestionItemWrapper}>
-                <TouchableOpacity 
-                    style={styles.suggestionItem}
-                    onPress={() => {
-                        // Handle the onPress directly here since we can't access the internal methods
-                        // This way we manually trigger the same functionality
-                        if (searchRef.current) {
-                            // First set the address text to show in the input
-                            searchRef.current.setAddressText(row.description);
-                            // Then fetch details and handle selection
-                            // Include additional fields for place details
-                            fetch(`https://maps.googleapis.com/maps/api/place/details/json?place_id=${row.place_id}&fields=geometry,formatted_address,name,photos,types,rating,price_level,international_phone_number,website,opening_hours&key=${GOOGLE_MAPS_API_KEY}`)
-                                .then(response => response.json())
-                                .then(data => {
-                                    if (data.result) {
-                                        const details: GooglePlaceDetail = {
-                                            geometry: {
-                                                location: {
-                                                    lat: data.result.geometry.location.lat,
-                                                    lng: data.result.geometry.location.lng,
-                                                }
-                                            },
-                                            formatted_address: data.result.formatted_address,
-                                            name: data.result.name,
-                                            photos: data.result.photos,
-                                            types: data.result.types,
-                                            rating: data.result.rating,
-                                            price_level: data.result.price_level,
-                                            international_phone_number: data.result.international_phone_number,
-                                            website: data.result.website,
-                                            opening_hours: data.result.opening_hours,
-                                        };
-                                        handlePlaceSelect(row, details);
-                                    }
-                                })
-                                .catch(error => console.error('Error fetching place details:', error));
-                        }
-                    }}
-                >
-                    <Ionicons
-                        name="location-outline"
-                        size={22}
-                        color="#555"
-                        style={styles.suggestionIcon}
-                    />
-                    <View style={styles.suggestionTextContainer}>
-                        <Text
-                            style={styles.suggestionPrimary}
-                            numberOfLines={1}
-                            ellipsizeMode="tail"
-                        >
-                            {mainText}
-                        </Text>
-
-                        {secondaryText.length > 0 && (
-                            <Text
-                                style={styles.suggestionSecondary}
-                                numberOfLines={1}
-                                ellipsizeMode="tail"
-                            >
-                                {secondaryText}
-                            </Text>
-                        )}
-                    </View>
-                </TouchableOpacity>
-            </View>
-        );
-    };
+            }} 
+        />
+    );
 
     return (
         <View style={styles.container}>
@@ -429,67 +293,7 @@ const styles = StyleSheet.create({
         fontSize: 18,
         fontWeight: 'bold',
         margin: 12,
-    },
-    recentItem: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingVertical: 12,
-        paddingHorizontal: 15,
-        borderBottomWidth: 1,
-        borderBottomColor: '#e0e0e0',
-        backgroundColor: '#f8f8f8',
-        width: '100%',
-    },
-    recentIcon: { marginRight: 12 },
-    recentTextContainer: {
-        flex: 1,
-        width: '100%',
-        overflow: 'hidden',
-    },
-    recentItemTitle: {
-        fontSize: 16,
-        color: '#000',
-        width: '100%',
-    },
-    recentItemSubtitle: {
-        fontSize: 14,
-        color: '#555',
-        width: '100%',
-    },
-    suggestionItem: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingVertical: 12,
-        paddingHorizontal: 15,
-        borderBottomWidth: 1,
-        borderBottomColor: '#e0e0e0',
-        backgroundColor: '#fff',
-        width: '100%',
-    },
-    suggestionIcon: {
-        marginRight: 12,
-    },
-    suggestionTextContainer: {
-        flex: 1,
-        width: '100%',
-        overflow: 'hidden',
-    },
-    suggestionPrimary: {
-        fontSize: 16,
-        color: '#000',
-        flexShrink: 1,
-        width: '100%',
-    },
-    suggestionSecondary: {
-        fontSize: 14,
-        color: '#555',
-        flexShrink: 1,
-        width: '100%',
-    },
-    suggestionItemWrapper: {
-        width: '100%',
-        overflow: 'hidden',
-    },
+    },    // Removed styles that were moved to the individual components
 });
 
 export default SearchBar;
