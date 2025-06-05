@@ -73,14 +73,16 @@ function RootLayoutNav() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
+        <StatusBar translucent backgroundColor="transparent" style="dark" />
         <ToastProvider>
-          <Stack>
-            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            <Stack.Screen name="collab" options={{ headerShown: false }} />
-            <Stack.Screen name="route" options={{ headerShown: false }} />
-            <Stack.Screen name="livemap" options={{ headerShown: false }} />
-          </Stack>
-          <StatusBar style="auto" />
+          <View style={{ flex: 1, backgroundColor: '#fff', borderRadius: 20, overflow: 'hidden' }}>
+            <Stack>
+              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+              <Stack.Screen name="collab" options={{ headerShown: false }} />
+              <Stack.Screen name="route" options={{ headerShown: false }} />
+              <Stack.Screen name="livemap" options={{ headerShown: false }} />
+            </Stack>
+          </View>
         </ToastProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>

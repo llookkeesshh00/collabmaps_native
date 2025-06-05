@@ -1,46 +1,41 @@
 import { Tabs } from 'expo-router';
-import { Text, TouchableOpacity, View } from 'react-native';
+import { Text, TouchableOpacity } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { StatusBar } from 'expo-status-bar';
 
-export default function Layout() {
+export default function TabLayout() {
   return (
-    <SafeAreaProvider >
-        <StatusBar translucent backgroundColor="transparent"  />
-      <View style={{ flex: 1, backgroundColor: '#fff',borderRadius:20 }}>
-
-        <Tabs
-          initialRouteName="home"
-          screenOptions={{
-            headerShown: false,
-            tabBarHideOnKeyboard: true,
-            tabBarStyle: {
-              backgroundColor: '#F3F3F3',
-              height: 60,
-              borderTopWidth: 0,
-              elevation: 5,
-              shadowOpacity: 0.1,
-            },
-          }}
-        >
-          <Tabs.Screen
-            name="home"
-            options={{
-              title: 'Home Page',
-              tabBarButton: (props: any) => <CustomTabButton {...props} icon="home" label="Home" />,
-            }}
-          />
-          <Tabs.Screen
-            name="join"
-            options={{
-              title: 'join',
-              tabBarButton: (props: any) => <CustomTabButton {...props} icon="clock-o" label="join" />,
-            }}
-          />
-        </Tabs>
-      </View>
-    </SafeAreaProvider>
+    <Tabs
+      initialRouteName="home"
+      screenOptions={{
+        headerShown: false,
+        tabBarHideOnKeyboard: true,
+        tabBarStyle: {
+          backgroundColor: '#F3F3F3',
+          height: 60,
+          borderTopWidth: 0,
+          elevation: 5,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: -3 },
+          shadowOpacity: 0.1,
+          shadowRadius: 3,
+        },
+      }}
+    >
+      <Tabs.Screen
+        name="home"
+        options={{
+          title: 'Home Page',
+          tabBarButton: (props: any) => <CustomTabButton {...props} icon="home" label="Home" />,
+        }}
+      />
+      <Tabs.Screen
+        name="join"
+        options={{
+          title: 'join',
+          tabBarButton: (props: any) => <CustomTabButton {...props} icon="clock-o" label="join" />,
+        }}
+      />
+    </Tabs>
   );
 }
 

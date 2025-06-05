@@ -1,17 +1,16 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Alert, View, StyleSheet, TouchableOpacity, Image, Text } from 'react-native';
-import MapView, { Marker } from 'react-native-maps';
+import MapView, { Marker, Callout } from 'react-native-maps';
 import * as Location from 'expo-location';
 import SearchBar from '../components/SearchBar';
-import Constants from 'expo-constants';
 import Modal from 'react-native-modal';
-import axios from 'axios'
 import { ScrollView } from 'react-native';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 
-const GOOGLE_MAPS_API_KEY = Constants.expoConfig?.extra?.googleMapsApiKey;
+// Hard-code the API key directly to avoid runtime issues
+const GOOGLE_MAPS_API_KEY = 'AIzaSyAR8Sxn_UmTfySxL4DT1RefR8j-QYGntpA';
 //defining a structure for an object 
 type LatLng = {
   latitude: number;
@@ -138,12 +137,14 @@ const HomepageMap = () => {
 
   return (
     <SafeAreaView style={{ flex: 1 }}>
-      {/* your map and all content goes here */}
-
       <StatusBar translucent backgroundColor="transparent" style="dark" />
       <View style={styles.container}>
         <View style={styles.searchBarContainer}>
-          <SearchBar onPlaceSelected={handleSearchSelect} query={searchQuery} setQuery={setSearchQuery} />
+          <SearchBar 
+            onPlaceSelected={handleSearchSelect} 
+            query={searchQuery} 
+            setQuery={setSearchQuery} 
+          />
         </View>
 
         <MapView
@@ -160,11 +161,18 @@ const HomepageMap = () => {
           showsMyLocationButton={false}
           mapPadding={{ top: 0, right: 0, bottom: 100, left: 0 }}
         >
-          {destination && <Marker coordinate={destination} title="Destination" />}
+          {destination && (
+            <Marker coordinate={destination}>
+              <Callout>
+                <Text>Destination</Text>
+              </Callout>
+            </Marker>
+          )}
         </MapView>
-          <TouchableOpacity style={styles.myLocationButton} onPress={handleMyLocationPress}>
+        <TouchableOpacity style={styles.myLocationButton} onPress={handleMyLocationPress}>
           <Image source={require('../../assets/images/my-location.png')} style={styles.asideIcon} />
         </TouchableOpacity>
+
 
         {/* Bottom Popup Modal */}
         <Modal
@@ -175,13 +183,12 @@ const HomepageMap = () => {
         >
           <View style={styles.modalContent}>
             {placeDetails && (
-              <>
-                <Text style={styles.modalTitle}>{placeDetails.name}</Text>
-                <Text className='text-gray-600 mb-6'>{placeDetails.address}</Text>
+              <>                <Text style={styles.modalTitle}>{placeDetails.name}</Text>
+                <Text style={styles.modalAddress}>{placeDetails.address}</Text>
                 {placeDetails.photoUrls && placeDetails.photoUrls.length > 0 && (
                   <View style={{ height: 150, marginBottom: 10 }}>
                     <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                      {placeDetails.photoUrls?.map((url, index) => (
+                      {placeDetails.photoUrls.map((url, index) => (
                         <Image
                           key={index}
                           source={{ uri: url }}
@@ -200,8 +207,7 @@ const HomepageMap = () => {
 
               </>
             )}
-
-            <View className='flex flex-row justify-between gap-2 '>
+            <View style={styles.buttonContainer}>
               <TouchableOpacity
                 style={styles.optionButton}
                 onPress={() => {
@@ -210,12 +216,11 @@ const HomepageMap = () => {
                   if (userLocation && destination) {
                     router.push({
                       pathname: '/route',
-                      params: {
-                        slat: userLocation.latitude,
+                      params: {                        slat: userLocation.latitude,
                         slng: userLocation.longitude,
                         dlat: destination.latitude,
                         dlng: destination.longitude,
-                        from:"homepage",
+                        from: "homepage",
                       },
                     })
 
@@ -251,16 +256,18 @@ const HomepageMap = () => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, flexDirection: 'column' },
-  searchBarContainer: {
+  container: { flex: 1, flexDirection: 'column' },  searchBarContainer: {
     position: 'absolute',
     top: 20,
     left: 15,
     right: 15,
-    zIndex: 10,
+    zIndex: 999,
+    elevation: 999, // for Android
     alignItems: 'center',
+    backgroundColor: 'transparent',
   },
-  map: { flex: 1 },  myLocationButton: {
+  map: { flex: 1 },
+  myLocationButton: {
     position: 'absolute',
     top: 88,
     right: 15,
@@ -291,11 +298,15 @@ const styles = StyleSheet.create({
     padding: 20,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
-  },
-  modalTitle: {
+  },  modalTitle: {
     fontSize: 20,
     fontWeight: 'bold',
     marginBottom: 10,
+  },
+  modalAddress: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 20,
   },
   optionButton: {
     marginTop: 15,
@@ -320,27 +331,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     backgroundColor: 'green',
     borderRadius: 40,
-  },
-  joinButton: {
-    display: 'flex',
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 5,
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    backgroundColor: '#2D79F4',
-    borderRadius: 40,
-    position: 'absolute',
-    bottom: 20,
-    right: 20,
-    padding: 15,
-    shadowColor: '#000',
-  },
-  optionText: {
+  },  optionText: {
     color: 'white',
     textAlign: 'center',
     fontWeight: 'bold',
+  },
+  buttonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 8,
   },
 });
 

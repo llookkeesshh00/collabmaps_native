@@ -1,7 +1,9 @@
 import React, { useRef, forwardRef, useImperativeHandle } from 'react';
 import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
 import { View, Text, Image, StyleSheet } from 'react-native';
-import Constants from 'expo-constants';
+
+// Hard-code the API key directly to avoid runtime issues
+const GOOGLE_MAPS_API_KEY = 'AIzaSyAR8Sxn_UmTfySxL4DT1RefR8j-QYGntpA';
 
 type Props = {
   onPlaceSelected: (details: any) => void;
@@ -13,20 +15,13 @@ export type SearchBarRef = {
   clearSearch: () => void;
 };
 
-const SearchBar = forwardRef<SearchBarRef, Props>(({ onPlaceSelected }, ref) => {
+const SearchBar = forwardRef<SearchBarRef, Props>(({ onPlaceSelected, query, setQuery }, ref) => {
   const googleRef = useRef<any>(null);
-  const GOOGLE_MAPS_API_KEY = Constants.expoConfig?.extra?.googleMapsApiKey;
-
   useImperativeHandle(ref, () => ({
     clearSearch: () => {
       googleRef.current?.clear();
     },
   }));
-
-  if (!GOOGLE_MAPS_API_KEY) {
-    console.error('Google Maps API key is not set');
-    return null;
-  }
 
   return (
     <View style={styles.wrapper}>
@@ -35,12 +30,17 @@ const SearchBar = forwardRef<SearchBarRef, Props>(({ onPlaceSelected }, ref) => 
         placeholder="Search for a location"
         minLength={2}
         fetchDetails
-        onPress={(data, details = null) => onPlaceSelected({ data, details })}
-        query={{
+        onPress={(data, details = null) => onPlaceSelected({ data, details })}        query={{
           key: GOOGLE_MAPS_API_KEY,
           language: 'en',
           components: 'country:in'
         }}
+        textInputProps={{
+          autoCapitalize: 'none',
+          autoCorrect: false
+        }}
+        keyboardShouldPersistTaps="always"
+        listViewDisplayed={true}
         enablePoweredByContainer={false}
         styles={{
           container: { width: '100%' },
@@ -109,10 +109,10 @@ const SearchBar = forwardRef<SearchBarRef, Props>(({ onPlaceSelected }, ref) => 
   );
 });
 
-const styles = StyleSheet.create({
-  wrapper: {
+const styles = StyleSheet.create({  wrapper: {
     zIndex: 1000,
     width: '100%',
+    position: 'relative',
   },
   suggestionRow: {
     flexDirection: 'row',
