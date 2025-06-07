@@ -1,149 +1,133 @@
-import React, { useRef, forwardRef, useImperativeHandle, useCallback, memo } from 'react';
-import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
-import { View, Text, Image, StyleSheet } from 'react-native';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { View, TextInput, FlatList, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
+import axios from 'axios';
 
-// Hard-code the API key directly to avoid runtime issues
-const GOOGLE_MAPS_API_KEY = 'AIzaSyAR8Sxn_UmTfySxL4DT1RefR8j-QYGntpA';
+const GOOGLE_MAPS_API_KEY = 'AIzaSyAR8Sxn_UmTfySxL4DT1RefR8j-QYGntpA'; // Ensure this key is correct and enabled
 
 type Props = {
-  onPlaceSelected: (details: any) => void;
-  query: string;
-  setQuery: React.Dispatch<React.SetStateAction<string>>;
+  onPlaceSelected: (details: {
+    geometry: { location: { lat: number; lng: number } };
+    name: string;
+    formatted_address: string;
+    place_id: string;
+  }) => void;
 };
 
-export type SearchBarRef = {
-  clearSearch: () => void;
-};
+const SearchBar = ({ onPlaceSelected }: Props) => {
+  const [query, setQuery] = useState('');
+  const [predictions, setPredictions] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const debounceTimeout = useRef<NodeJS.Timeout | null>(null);
 
-const SearchBar = memo(forwardRef<SearchBarRef, Props>(({ onPlaceSelected, query, setQuery }, ref) => {
-  const googleRef = useRef<any>(null);
-  useImperativeHandle(ref, () => ({
-    clearSearch: () => {
-      googleRef.current?.clear();
-    },
-  }));
+  const getPlacePredictions = async (text: string) => {
+    if (text.length < 3) {
+      setPredictions([]);
+      return;
+    }
+    setLoading(true);
+    try {
+      const url = `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${text}&key=${GOOGLE_MAPS_API_KEY}&components=country:in`;
+      const response = await axios.get(url);
+      setPredictions(response.data.predictions || []);
+    } catch (error) {
+      console.error('Error fetching place predictions:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const handlePress = useCallback((data: any, details: any = null) => {
-    onPlaceSelected({ data, details });
+  const getPlaceDetails = useCallback(async (placeId: string, description: string) => {
+    setQuery(description); // Show full text in input
+    setPredictions([]); // Hide list
+    try {
+      const url = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=geometry,name,formatted_address,place_id&key=${GOOGLE_MAPS_API_KEY}`;
+      const response = await axios.get(url);
+      if (response.data.result) {
+        onPlaceSelected(response.data.result);
+      }
+    } catch (error) {
+      console.error('Error fetching place details:', error);
+    }
   }, [onPlaceSelected]);
 
-  const renderRow = useCallback((data: any) => {
-    const mainText = data.structured_formatting.main_text;
-    const secondaryText = data.structured_formatting.secondary_text;
-  
-    const truncatedMainText = mainText.length > 35 ? `${mainText.slice(0, 30)}...` : mainText;
-    const truncatedSecondaryText = secondaryText.length > 70 ? `${secondaryText.slice(0, 40)}...` : secondaryText;
-  
-    return (
-      <View style={styles.suggestionRow}>
-        <Image source={require('../../assets/images/location.png')} style={styles.locationIcon} />
-        <View style={styles.textContainer}>
-          <Text style={styles.mainText}>{truncatedMainText}</Text>
-          <Text style={styles.secondaryText}>{truncatedSecondaryText}</Text>
-        </View>
-      </View>
-    );
-  }, []);
+  useEffect(() => {
+    if (debounceTimeout.current) {
+      clearTimeout(debounceTimeout.current);
+    }
+    if (query) {
+      debounceTimeout.current = setTimeout(() => {
+        getPlacePredictions(query);
+      }, 500); // Debounce for 500ms
+    }
+  }, [query]);
 
   return (
-    <View style={styles.wrapper}>
-      <GooglePlacesAutocomplete
-        ref={googleRef}
+    <View style={styles.container}>
+      <TextInput
+        style={styles.textInput}
         placeholder="Search for a location"
-        minLength={2}
-        fetchDetails
-        onPress={handlePress}
-        query={{
-          key: GOOGLE_MAPS_API_KEY,
-          language: 'en',
-          components: 'country:in'
-        }}
-        textInputProps={{
-          autoCapitalize: 'none',
-          autoCorrect: false
-        }}
-        keyboardShouldPersistTaps="always"
-        listViewDisplayed={true}
-        enablePoweredByContainer={false}
-        styles={{
-          container: { width: '100%' },
-          textInputContainer: {
-            backgroundColor: '#fff',
-            borderRadius: 10,
-            height: 48,
-            width: '100%',
-            paddingHorizontal: 15,
-            justifyContent: 'center',
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.3,
-            shadowRadius: 4,
-            elevation: 5,
-          },
-          textInput: {
-            fontSize: 16,
-            color: '#333',
-            paddingVertical: 10,
-            margin: 0,
-            backgroundColor: '#fff',
-            borderRadius: 10,
-            height: 48,
-          },
-          listView: {
-            backgroundColor: '#fff',
-            borderRadius: 10,
-            marginTop: 5,
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.2,
-            shadowRadius: 4,
-            elevation: 5,
-          },
-          row: {
-            flexDirection: 'row',
-            padding: 12,
-            alignItems: 'center',
-          },
-          separator: {
-            height: 1,
-            backgroundColor: '#eee',
-          },
-        }}
-        renderRow={renderRow}
+        value={query}
+        onChangeText={setQuery}
       />
+      {loading && <ActivityIndicator style={styles.loader} />}
+      {predictions.length > 0 && (
+        <View style={styles.listView}>
+          <FlatList
+            data={predictions}
+            keyExtractor={(item) => item.place_id}
+            renderItem={({ item }) => (
+              <TouchableOpacity style={styles.row} onPress={() => getPlaceDetails(item.place_id, item.description)}>
+                <Text>{item.description}</Text>
+              </TouchableOpacity>
+            )}
+            keyboardShouldPersistTaps="always"
+          />
+        </View>
+      )}
     </View>
   );
-}));
+};
 
-const styles = StyleSheet.create({  wrapper: {
+const styles = StyleSheet.create({
+  container: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
     zIndex: 1000,
-    width: '100%',
-    position: 'relative',
   },
-  suggestionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 10,
+  textInput: {
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    height: 48,
     paddingHorizontal: 15,
-    width: '100%',
-  },
-  textContainer: {
-    flex: 1,
-  },
-  locationIcon: {
-    width: 25,
-    height: 25,
-    marginRight: 10,
-    tintColor: '#007AFF',
-  },
-  mainText: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#000',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
   },
-  secondaryText: {
-    fontSize: 12,
-    color: '#555',
+  loader: {
+    position: 'absolute',
+    right: 15,
+    top: 14,
+  },
+  listView: {
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    marginTop: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 5,
+    maxHeight: 300,
+  },
+  row: {
+    padding: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
   },
 });
 

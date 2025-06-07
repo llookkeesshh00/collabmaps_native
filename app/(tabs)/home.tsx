@@ -21,7 +21,6 @@ const HomepageMap = () => {
   const mapRef = useRef<MapView>(null);
   const [userLocation, setUserLocation] = useState<LatLng | null>(null);
   const [destination, setDestination] = useState<LatLng | null>(null);
-  const [searchQuery, setSearchQuery] = useState<string>('');
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [placeDetails, setPlaceDetails] = useState<{ name: string; address: string; photoUrls?: string[]; placeId?: string; } | null>(null);
   const [loading, setLoading] = useState(true);
@@ -78,6 +77,7 @@ const HomepageMap = () => {
   }, [userLocation]); // This runs only when userLocation changes
 
   const getPlacePhoto = useCallback(async (placeId: string, nameFromAutocomplete: string) => {
+    // This function now works as originally intended
     const apiKey = GOOGLE_MAPS_API_KEY;
     const detailsUrl = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=formatted_address,photos&key=${apiKey}`;
 
@@ -99,12 +99,12 @@ const HomepageMap = () => {
     });
   }, []);
 
-  const handleSearchSelect = useCallback(({ data, details }: any) => {
+  const handleSearchSelect = useCallback((details: any) => {
     if (!details) return;
 
     const { lat, lng } = details.geometry.location;
-    const name = data?.structured_formatting?.main_text || details.name || "Unknown";
-    const placeId = data.place_id;
+    const placeId = details.place_id;
+    const name = details.name;
 
     const newDestination = { latitude: lat, longitude: lng };
     setDestination(newDestination);
@@ -116,8 +116,9 @@ const HomepageMap = () => {
       longitudeDelta: 0.02,
     }, 800);
 
+    // Re-enable getPlacePhoto to fetch images
     getPlacePhoto(placeId, name);
-  }, [getPlacePhoto]);
+  }, [getPlacePhoto]); // Dependency is correct
 
   const handleMyLocationPress = useCallback(async () => {
     try {
@@ -161,12 +162,10 @@ const HomepageMap = () => {
     <SafeAreaView style={{ flex: 1 }}>
       <StatusBar translucent backgroundColor="transparent" style="dark" />
       <View style={styles.container}>
-        {/* --- RESTORING SEARCHBAR --- */}
         <View style={styles.searchBarContainer}>
           <SearchBar 
             onPlaceSelected={handleSearchSelect} 
-            query={searchQuery} 
-            setQuery={setSearchQuery} 
+            // No longer passing query or setQuery
           />
         </View>
 
