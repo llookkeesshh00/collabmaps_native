@@ -169,8 +169,7 @@ const HomepageMap = () => {
           />
         </View>
 
-        {/* --- MAPVIEW TEMPORARILY REMOVED FOR DEBUGGING --- */}
-        {/*
+        {/* --- RESTORING MAPVIEW --- */}
         <MapView
           ref={mapRef}
           style={styles.map}
@@ -188,12 +187,13 @@ const HomepageMap = () => {
             </Marker>
           )}
         </MapView>
-        */}
-
+        
         <TouchableOpacity style={styles.myLocationButton} onPress={handleMyLocationPress}>
           <Image source={require('../../assets/images/my-location.png')} style={styles.asideIcon} />
         </TouchableOpacity>
 
+        {/* --- MODAL TEMPORARILY REMOVED FOR DEBUGGING --- */}
+        {/*
         <Modal
           isVisible={isModalVisible}
           onBackdropPress={() => setIsModalVisible(false)}
@@ -269,6 +269,7 @@ const HomepageMap = () => {
             </View>
           </View>
         </Modal>
+        */}
       </View>
     </SafeAreaView>
   );
