@@ -20,6 +20,7 @@ const SearchBar = ({ query, onQueryChange, onPlaceSelected }: Props) => {
   const [loading, setLoading] = useState(false);
   const debounceTimeout = useRef<NodeJS.Timeout | null>(null);
   const textInputRef = useRef<TextInput>(null);
+  const justSelected = useRef(false); // Flag to prevent re-fetching
 
   const getPlacePredictions = async (text: string) => {
     if (text.length < 2) { // Start searching at 2 characters
@@ -39,7 +40,6 @@ const SearchBar = ({ query, onQueryChange, onPlaceSelected }: Props) => {
   };
 
   const getPlaceDetails = useCallback(async (placeId: string) => {
-    setPredictions([]); // Hide list immediately
     try {
       const url = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=geometry,name,formatted_address,place_id&key=${GOOGLE_MAPS_API_KEY}`;
       const response = await axios.get(url);
@@ -52,17 +52,24 @@ const SearchBar = ({ query, onQueryChange, onPlaceSelected }: Props) => {
   }, [onPlaceSelected]);
   
   const handlePressRow = (placeId: string, description: string) => {
-    onQueryChange(description); // Update parent state
+    justSelected.current = true;
+    setPredictions([]); // Hide list immediately on press
+    onQueryChange(description);
     getPlaceDetails(placeId);
-    setTimeout(() => textInputRef.current?.focus(), 100); // Re-focus with delay
   };
 
   const handleClear = () => {
-    onQueryChange(''); // Let parent handle state
+    onQueryChange('');
     onPlaceSelected(null);
+    setPredictions([]);
   };
 
   useEffect(() => {
+    // If a place was just selected, don't re-fetch
+    if (justSelected.current) {
+      justSelected.current = false;
+      return;
+    }
     if (debounceTimeout.current) clearTimeout(debounceTimeout.current);
     if (query.length > 2) {
       debounceTimeout.current = setTimeout(() => getPlacePredictions(query), 300);
