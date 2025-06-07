@@ -5,7 +5,7 @@ import * as Location from 'expo-location';
 import SearchBar from '../components/SearchBar';
 import Modal from 'react-native-modal';
 import { ScrollView } from 'react-native';
-import { router } from 'expo-router';
+import { useRouter } from "expo-router";
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 
@@ -20,10 +20,12 @@ type LatLng = {
 const HomepageMap = () => {
   const mapRef = useRef<MapView>(null);
   const [userLocation, setUserLocation] = useState<LatLng | null>(null);
-  const [destination, setDestination] = useState<LatLng | null>(null);
+  const [destination, setDestination] = useState<any>(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [placeDetails, setPlaceDetails] = useState<{ name: string; address: string; photoUrls?: string[]; placeId?: string; } | null>(null);
   const [loading, setLoading] = useState(true);
+  const [query, setQuery] = useState('');
+  const router = useRouter();
 
   // Memoize the initial region to prevent re-renders
   const initialRegion = useMemo(() => ({
@@ -76,7 +78,7 @@ const HomepageMap = () => {
     }
   }, [userLocation]); // This runs only when userLocation changes
 
-  const getPlacePhoto = useCallback(async (placeId: string, nameFromAutocomplete: string) => {
+  const getPlacePhoto = useCallback(async (placeId: string, name: string) => {
     // This function now works as originally intended
     const apiKey = GOOGLE_MAPS_API_KEY;
     const detailsUrl = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=formatted_address,photos&key=${apiKey}`;
@@ -92,7 +94,7 @@ const HomepageMap = () => {
     );
 
     setPlaceDetails({
-      name: nameFromAutocomplete,
+      name: name,
       address: formattedAddress,
       photoUrls,
       placeId,
@@ -100,26 +102,28 @@ const HomepageMap = () => {
   }, []);
 
   const handleSearchSelect = useCallback((details: any) => {
-    if (!details) {
-      setDestination(null);
-      return;
+    setDestination(details);
+
+    if (details) {
+      setQuery(details.name);
+      setPlaceDetails({
+        name: details.name,
+        address: details.formatted_address,
+        placeId: details.place_id
+      });
+      getPlacePhoto(details.place_id, details.name);
+      
+      const { lat, lng } = details.geometry.location;
+      mapRef.current?.animateToRegion({
+        latitude: lat,
+        longitude: lng,
+        latitudeDelta: 0.01,
+        longitudeDelta: 0.01,
+      });
+    } else {
+      setQuery('');
+      setPlaceDetails(null);
     }
-
-    const { lat, lng } = details.geometry.location;
-    const placeId = details.place_id;
-    const name = details.name;
-
-    const newDestination = { latitude: lat, longitude: lng };
-    setDestination(newDestination); // This will trigger the modal via useEffect
-
-    // Animate map to the new destination
-    mapRef.current?.animateToRegion({
-      ...newDestination,
-      latitudeDelta: 0.02,
-      longitudeDelta: 0.02,
-    }, 800);
-
-    getPlacePhoto(placeId, name);
   }, [getPlacePhoto]);
 
   useEffect(() => {
@@ -155,8 +159,8 @@ const HomepageMap = () => {
     router.push({
       pathname: '/collab',
       params: {
-        dlat: destination?.latitude,
-        dlng: destination?.longitude,
+        dlat: destination?.geometry.location.lat,
+        dlng: destination?.geometry.location.lng,
         address : placeDetails?.address,
         name : placeDetails?.name,
         placeId: placeDetails?.placeId,
@@ -169,9 +173,10 @@ const HomepageMap = () => {
       <StatusBar translucent backgroundColor="transparent" style="dark" />
       <View style={styles.container}>
         <View style={styles.searchBarContainer}>
-          <SearchBar 
-            onPlaceSelected={handleSearchSelect} 
-            // No longer passing query or setQuery
+          <SearchBar
+            query={query}
+            onQueryChange={setQuery}
+            onPlaceSelected={handleSearchSelect}
           />
         </View>
 
@@ -185,12 +190,15 @@ const HomepageMap = () => {
           showsMyLocationButton={false}
           mapPadding={{ top: 0, right: 0, bottom: 100, left: 0 }}
         >
+          {userLocation && <Marker coordinate={userLocation} title="You are here" pinColor='blue'/>}
           {destination && (
-            <Marker coordinate={destination}>
-              <Callout>
-                <Text>Destination</Text>
-              </Callout>
-            </Marker>
+            <Marker
+              coordinate={{
+                latitude: destination.geometry.location.lat,
+                longitude: destination.geometry.location.lng,
+              }}
+              title={destination.name}
+            />
           )}
         </MapView>
         
@@ -235,22 +243,20 @@ const HomepageMap = () => {
               <TouchableOpacity
                 style={styles.optionButton}
                 onPress={() => {
-
                   setIsModalVisible(false);
                   if (userLocation && destination) {
                     router.push({
                       pathname: '/route',
-                      params: {                        slat: userLocation.latitude,
+                      params: {
+                        slat: userLocation.latitude,
                         slng: userLocation.longitude,
-                        dlat: destination.latitude,
-                        dlng: destination.longitude,
+                        dlat: destination.geometry.location.lat,
+                        dlng: destination.geometry.location.lng,
                         from: "homepage",
                       },
                     })
-
                   }
-                }
-                }
+                }}
               >
                 <Image source={require('../../assets/images/directions.png')} style={styles.asideIcon} />
                 <Text style={styles.optionText}>Directions</Text>
@@ -258,7 +264,7 @@ const HomepageMap = () => {
 
               <TouchableOpacity
                 style={styles.optButton}
-                onPress={() => {handleCollabPress()}}
+                onPress={() => { handleCollabPress() }}
               >
                 <Image source={require('../../assets/images/coolab.png')} style={styles.asideIcon} />
                 <Text style={styles.optionText}>Collab</Text>

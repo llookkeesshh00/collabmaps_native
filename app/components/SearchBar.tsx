@@ -5,6 +5,8 @@ import axios from 'axios';
 const GOOGLE_MAPS_API_KEY = 'AIzaSyAR8Sxn_UmTfySxL4DT1RefR8j-QYGntpA'; // Ensure this key is correct and enabled
 
 type Props = {
+  query: string;
+  onQueryChange: (text: string) => void;
   onPlaceSelected: (details: {
     geometry: { location: { lat: number; lng: number } };
     name: string;
@@ -13,13 +15,11 @@ type Props = {
   } | null) => void; // Allow null to signal a clear event
 };
 
-const SearchBar = ({ onPlaceSelected }: Props) => {
-  const [query, setQuery] = useState('');
+const SearchBar = ({ query, onQueryChange, onPlaceSelected }: Props) => {
   const [predictions, setPredictions] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const debounceTimeout = useRef<NodeJS.Timeout | null>(null);
-  const justSelected = useRef(false); // Ref to prevent re-fetching after selection
-  const textInputRef = useRef<TextInput>(null); // Ref for the text input
+  const textInputRef = useRef<TextInput>(null);
 
   const getPlacePredictions = async (text: string) => {
     if (text.length < 2) { // Start searching at 2 characters
@@ -38,11 +38,8 @@ const SearchBar = ({ onPlaceSelected }: Props) => {
     }
   };
 
-  const getPlaceDetails = useCallback(async (placeId: string, description: string) => {
-    justSelected.current = true; // Signal that a selection was made
-    setQuery(description);
+  const getPlaceDetails = useCallback(async (placeId: string) => {
     setPredictions([]); // Hide list immediately
-    textInputRef.current?.focus(); // Re-focus the input to bring keyboard back
     try {
       const url = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=geometry,name,formatted_address,place_id&key=${GOOGLE_MAPS_API_KEY}`;
       const response = await axios.get(url);
@@ -53,25 +50,22 @@ const SearchBar = ({ onPlaceSelected }: Props) => {
       console.error('Error fetching place details:', error);
     }
   }, [onPlaceSelected]);
+  
+  const handlePressRow = (placeId: string, description: string) => {
+    onQueryChange(description); // Update parent state
+    getPlaceDetails(placeId);
+    setTimeout(() => textInputRef.current?.focus(), 100); // Re-focus with delay
+  };
 
   const handleClear = () => {
-    setQuery('');
-    setPredictions([]);
-    onPlaceSelected(null); // Signal to parent to clear marker
+    onQueryChange(''); // Let parent handle state
+    onPlaceSelected(null);
   };
 
   useEffect(() => {
-    if (justSelected.current) {
-      justSelected.current = false;
-      return; // Skip fetching predictions right after a selection
-    }
-    if (debounceTimeout.current) {
-      clearTimeout(debounceTimeout.current);
-    }
-    if (query) {
-      debounceTimeout.current = setTimeout(() => {
-        getPlacePredictions(query);
-      }, 300); // Debounce for 300ms
+    if (debounceTimeout.current) clearTimeout(debounceTimeout.current);
+    if (query.length > 2) {
+      debounceTimeout.current = setTimeout(() => getPlacePredictions(query), 300);
     } else {
       setPredictions([]);
     }
@@ -85,7 +79,7 @@ const SearchBar = ({ onPlaceSelected }: Props) => {
           style={styles.textInput}
           placeholder="Search for a location"
           value={query}
-          onChangeText={setQuery}
+          onChangeText={onQueryChange} // Controlled by parent
         />
         {query.length > 0 && (
           <TouchableOpacity onPress={handleClear} style={styles.clearButton}>
@@ -100,7 +94,7 @@ const SearchBar = ({ onPlaceSelected }: Props) => {
             data={predictions}
             keyExtractor={(item) => item.place_id}
             renderItem={({ item }) => (
-              <TouchableOpacity style={styles.row} onPress={() => getPlaceDetails(item.place_id, item.description)}>
+              <TouchableOpacity style={styles.row} onPress={() => handlePressRow(item.place_id, item.description)}>
                 <Image source={require('../../assets/images/location.png')} style={styles.locationIcon} />
                 <Text style={styles.suggestionText}>{item.description}</Text>
               </TouchableOpacity>
