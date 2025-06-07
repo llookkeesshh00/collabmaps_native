@@ -169,6 +169,8 @@ const HomepageMap = () => {
           />
         </View>
 
+        {/* --- MAPVIEW TEMPORARILY REMOVED FOR DEBUGGING --- */}
+        {/*
         <MapView
           ref={mapRef}
           style={styles.map}
@@ -186,6 +188,8 @@ const HomepageMap = () => {
             </Marker>
           )}
         </MapView>
+        */}
+
         <TouchableOpacity style={styles.myLocationButton} onPress={handleMyLocationPress}>
           <Image source={require('../../assets/images/my-location.png')} style={styles.asideIcon} />
         </TouchableOpacity>
