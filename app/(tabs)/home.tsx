@@ -24,36 +24,49 @@ const HomepageMap = () => {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [placeDetails, setPlaceDetails] = useState<{ name: string; address: string; photoUrls?: string[]; placeId?: string; } | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  // Standalone function for requesting and setting user location
+  const requestLocation = async () => {
+    setLoading(true);
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        console.log("Location permission denied");
+        Alert.alert("Permission Denied", "Location permission is required to show your position on the map.");
+        setUserLocation(null); // Explicitly set to null
+        return; // Exit if permission is denied
+      }
+
+      const location = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.High,
+      });
+
+      if (location?.coords) {
+        const coords = {
+          latitude: location.coords.latitude,
+          longitude: location.coords.longitude,
+        };
+        setUserLocation(coords);
+
+        // Animate map only after location is set and mapRef is available
+        mapRef.current?.animateToRegion({
+          ...coords,
+          latitudeDelta: 0.05,
+          longitudeDelta: 0.05,
+        }, 1000);
+      }
+    } catch (error) {
+      console.error("Location setup error:", error);
+      Alert.alert("Location Error", "Could not fetch your current location. Please ensure location services are enabled.");
+    } finally {
+      setLoading(false); // Ensure loading is set to false after completion
+    }
+  };
 
   useEffect(() => {
-    (async () => {
-      try {
-        const { status } = await Location.requestForegroundPermissionsAsync();
-        if (status !== 'granted') {
-          console.log("Location permission denied");
-          setUserLocation(null);
-        } else {
-          const location = await Location.getCurrentPositionAsync({
-            accuracy: Location.Accuracy.High,
-          });
-          if (location?.coords) {
-            const coords = {
-              latitude: location.coords.latitude,
-              longitude: location.coords.longitude,
-            };
-            setUserLocation(coords);
-            mapRef.current?.animateToRegion({
-              ...coords,
-              latitudeDelta: 0.05,
-              longitudeDelta: 0.05,
-            }, 1000);
-          }
-        }
-      } catch (error) {
-        console.error("Location setup error:", error);
-      }
-    })();
-  }, []);
+    requestLocation();
+  }, []); // This effect runs only once on mount
 
   const handleSearchSelect = ({ data, details }: any) => {
     if (!details) return;
@@ -173,8 +186,6 @@ const HomepageMap = () => {
           <Image source={require('../../assets/images/my-location.png')} style={styles.asideIcon} />
         </TouchableOpacity>
 
-
-        {/* Bottom Popup Modal */}
         <Modal
           isVisible={isModalVisible}
           onBackdropPress={() => setIsModalVisible(false)}
@@ -183,7 +194,8 @@ const HomepageMap = () => {
         >
           <View style={styles.modalContent}>
             {placeDetails && (
-              <>                <Text style={styles.modalTitle}>{placeDetails.name}</Text>
+              <View>
+                <Text style={styles.modalTitle}>{placeDetails.name}</Text>
                 <Text style={styles.modalAddress}>{placeDetails.address}</Text>
                 {placeDetails.photoUrls && placeDetails.photoUrls.length > 0 && (
                   <View style={{ height: 150, marginBottom: 10 }}>
@@ -204,8 +216,7 @@ const HomepageMap = () => {
                     </ScrollView>
                   </View>
                 )}
-
-              </>
+              </View>
             )}
             <View style={styles.buttonContainer}>
               <TouchableOpacity

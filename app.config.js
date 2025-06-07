@@ -5,7 +5,7 @@ module.exports = () => ({
   slug: 'maps',
   version: '1.0.0',
   orientation: 'portrait',
-  icon: './assets/images/app-icon.png',
+  icon: './assets/images/app-icon.jpg',
   scheme: 'myapp',
   userInterfaceStyle: 'automatic',
   newArchEnabled: true,
@@ -48,5 +48,8 @@ module.exports = () => ({
     googleMapsApiKey: process.env.GOOGLE_MAPS_API_KEY,
     googleMapsApiBaseUrl: process.env.GOOGLE_MAPS_API_BASE_URL,
     websocketUrl: process.env.WS_URL,
+    "eas": {
+      "projectId": "1414134b-ce5b-4d6d-924e-012fd4775165"
+    }
   },
 });
