@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { View, TextInput, FlatList, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Image } from 'react-native';
 import axios from 'axios';
+import Constants from 'expo-constants';
 
-const GOOGLE_MAPS_API_KEY = 'AIzaSyAR8Sxn_UmTfySxL4DT1RefR8j-QYGntpA';
+const GOOGLE_MAPS_API_KEY = Constants.expoConfig?.extra?.googleMapsApiKey;
 
 type Props = {
   query: string;

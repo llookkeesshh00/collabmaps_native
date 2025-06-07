@@ -8,9 +8,10 @@ import { ScrollView } from 'react-native';
 import { useRouter } from "expo-router";
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
+import Constants from 'expo-constants';
 
 // Hard-code the API key directly to avoid runtime issues
-const GOOGLE_MAPS_API_KEY = 'AIzaSyAR8Sxn_UmTfySxL4DT1RefR8j-QYGntpA';
+const GOOGLE_MAPS_API_KEY = Constants.expoConfig?.extra?.googleMapsApiKey;
 //defining a structure for an object 
 type LatLng = {
   latitude: number;
