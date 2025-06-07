@@ -19,6 +19,7 @@ const SearchBar = ({ onPlaceSelected }: Props) => {
   const [loading, setLoading] = useState(false);
   const debounceTimeout = useRef<NodeJS.Timeout | null>(null);
   const justSelected = useRef(false); // Ref to prevent re-fetching after selection
+  const textInputRef = useRef<TextInput>(null); // Ref for the text input
 
   const getPlacePredictions = async (text: string) => {
     if (text.length < 2) { // Start searching at 2 characters
@@ -41,6 +42,7 @@ const SearchBar = ({ onPlaceSelected }: Props) => {
     justSelected.current = true; // Signal that a selection was made
     setQuery(description);
     setPredictions([]); // Hide list immediately
+    textInputRef.current?.focus(); // Re-focus the input to bring keyboard back
     try {
       const url = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=geometry,name,formatted_address,place_id&key=${GOOGLE_MAPS_API_KEY}`;
       const response = await axios.get(url);
@@ -79,6 +81,7 @@ const SearchBar = ({ onPlaceSelected }: Props) => {
     <View style={styles.container}>
       <View style={styles.inputContainer}>
         <TextInput
+          ref={textInputRef}
           style={styles.textInput}
           placeholder="Search for a location"
           value={query}
@@ -98,7 +101,8 @@ const SearchBar = ({ onPlaceSelected }: Props) => {
             keyExtractor={(item) => item.place_id}
             renderItem={({ item }) => (
               <TouchableOpacity style={styles.row} onPress={() => getPlaceDetails(item.place_id, item.description)}>
-                <Text>{item.description}</Text>
+                <Image source={require('../../assets/images/location.png')} style={styles.locationIcon} />
+                <Text style={styles.suggestionText}>{item.description}</Text>
               </TouchableOpacity>
             )}
             keyboardShouldPersistTaps="always"
@@ -162,10 +166,21 @@ const styles = StyleSheet.create({
     maxHeight: 300,
   },
   row: {
+    flexDirection: 'row',
+    alignItems: 'center',
     padding: 15,
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
   },
+  locationIcon: {
+    width: 20,
+    height: 20,
+    marginRight: 10,
+    tintColor: '#555',
+  },
+  suggestionText: {
+    flex: 1,
+  }
 });
 
 export default SearchBar;

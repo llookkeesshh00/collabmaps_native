@@ -100,10 +100,8 @@ const HomepageMap = () => {
   }, []);
 
   const handleSearchSelect = useCallback((details: any) => {
-    // Handle the clear button press
     if (!details) {
       setDestination(null);
-      setIsModalVisible(false);
       return;
     }
 
@@ -112,9 +110,9 @@ const HomepageMap = () => {
     const name = details.name;
 
     const newDestination = { latitude: lat, longitude: lng };
-    setDestination(newDestination);
-    setIsModalVisible(true);
+    setDestination(newDestination); // This will trigger the modal via useEffect
 
+    // Animate map to the new destination
     mapRef.current?.animateToRegion({
       ...newDestination,
       latitudeDelta: 0.02,
@@ -123,6 +121,10 @@ const HomepageMap = () => {
 
     getPlacePhoto(placeId, name);
   }, [getPlacePhoto]);
+
+  useEffect(() => {
+    setIsModalVisible(!!destination);
+  }, [destination]);
 
   const handleMyLocationPress = useCallback(async () => {
     try {
