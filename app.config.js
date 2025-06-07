@@ -8,6 +8,13 @@ module.exports = () => ({
   icon: './assets/images/app-icon.jpg',
   scheme: 'myapp',
   userInterfaceStyle: 'automatic',
+  updates: {
+    url: "https://u.expo.dev/1414134b-ce5b-4d6d-924e-012fd4775165",
+    channel: "main"
+  },
+  runtimeVersion: {
+    "policy": "appVersion"
+  },
   newArchEnabled: true,
   ios: {
     supportsTablet: true,

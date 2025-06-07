@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import { Alert, View, StyleSheet, TouchableOpacity, Image, Text } from 'react-native';
 import MapView, { Marker, Callout } from 'react-native-maps';
 import * as Location from 'expo-location';
@@ -26,8 +26,16 @@ const HomepageMap = () => {
   const [placeDetails, setPlaceDetails] = useState<{ name: string; address: string; photoUrls?: string[]; placeId?: string; } | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // Memoize the initial region to prevent re-renders
+  const initialRegion = useMemo(() => ({
+    latitude: userLocation?.latitude ?? 37.78825,
+    longitude: userLocation?.longitude ?? -122.4324,
+    latitudeDelta: 0.05,
+    longitudeDelta: 0.05,
+  }), [userLocation]);
+
   // Standalone function for requesting and setting user location
-  const requestLocation = async () => {
+  const requestLocation = useCallback(async () => {
     setLoading(true);
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
@@ -62,33 +70,13 @@ const HomepageMap = () => {
     } finally {
       setLoading(false); // Ensure loading is set to false after completion
     }
-  };
+  }, []);
 
   useEffect(() => {
     requestLocation();
-  }, []); // This effect runs only once on mount
+  }, [requestLocation]);
 
-  const handleSearchSelect = ({ data, details }: any) => {
-    if (!details) return;
-
-    const { lat, lng } = details.geometry.location;
-    const name = data?.structured_formatting?.main_text || details.name || "Unknown";
-    const placeId = data.place_id;
-
-    const newDestination = { latitude: lat, longitude: lng };
-    setDestination(newDestination);
-    setIsModalVisible(true);
-
-    mapRef.current?.animateToRegion({
-      ...newDestination,
-      latitudeDelta: 0.02,
-      longitudeDelta: 0.02,
-    }, 800);
-
-    getPlacePhoto(placeId, name);
-  };
-
-  const getPlacePhoto = async (placeId: string, nameFromAutocomplete: string) => {
+  const getPlacePhoto = useCallback(async (placeId: string, nameFromAutocomplete: string) => {
     const apiKey = GOOGLE_MAPS_API_KEY;
     const detailsUrl = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=formatted_address,photos&key=${apiKey}`;
 
@@ -108,9 +96,29 @@ const HomepageMap = () => {
       photoUrls,
       placeId,
     });
-  };
+  }, []);
 
-  const handleMyLocationPress = async () => {
+  const handleSearchSelect = useCallback(({ data, details }: any) => {
+    if (!details) return;
+
+    const { lat, lng } = details.geometry.location;
+    const name = data?.structured_formatting?.main_text || details.name || "Unknown";
+    const placeId = data.place_id;
+
+    const newDestination = { latitude: lat, longitude: lng };
+    setDestination(newDestination);
+    setIsModalVisible(true);
+
+    mapRef.current?.animateToRegion({
+      ...newDestination,
+      latitudeDelta: 0.02,
+      longitudeDelta: 0.02,
+    }, 800);
+
+    getPlacePhoto(placeId, name);
+  }, [getPlacePhoto]);
+
+  const handleMyLocationPress = useCallback(async () => {
     try {
       const location = await Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.High,
@@ -131,13 +139,13 @@ const HomepageMap = () => {
       console.error("Error getting location:", error);
       Alert.alert("Error", "Unable to get your location.");
     }
-  };
+  }, []);
 
-  const handleCollabPress = async () => {
+  const handleCollabPress = useCallback(async () => {
     // Close the modal before navigation
     setIsModalVisible(false);
     router.push({
-      pathname: '/collab',  
+      pathname: '/collab',
       params: {
         dlat: destination?.latitude,
         dlng: destination?.longitude,
@@ -146,7 +154,7 @@ const HomepageMap = () => {
         placeId: placeDetails?.placeId,
       },
     });
-  };
+  }, [destination, placeDetails]);
 
   return (
     <SafeAreaView style={{ flex: 1 }}>
@@ -164,12 +172,7 @@ const HomepageMap = () => {
           ref={mapRef}
           style={styles.map}
           provider="google"
-          initialRegion={{
-            latitude: userLocation?.latitude ?? 37.78825,
-            longitude: userLocation?.longitude ?? -122.4324,
-            latitudeDelta: 0.05,
-            longitudeDelta: 0.05,
-          }}
+          initialRegion={initialRegion}
           showsUserLocation
           showsMyLocationButton={false}
           mapPadding={{ top: 0, right: 0, bottom: 100, left: 0 }}
