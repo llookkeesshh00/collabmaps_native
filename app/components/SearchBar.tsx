@@ -1,4 +1,4 @@
-import React, { useRef, forwardRef, useImperativeHandle } from 'react';
+import React, { useRef, forwardRef, useImperativeHandle, useCallback, memo } from 'react';
 import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
 import { View, Text, Image, StyleSheet } from 'react-native';
 
@@ -15,13 +15,35 @@ export type SearchBarRef = {
   clearSearch: () => void;
 };
 
-const SearchBar = forwardRef<SearchBarRef, Props>(({ onPlaceSelected, query, setQuery }, ref) => {
+const SearchBar = memo(forwardRef<SearchBarRef, Props>(({ onPlaceSelected, query, setQuery }, ref) => {
   const googleRef = useRef<any>(null);
   useImperativeHandle(ref, () => ({
     clearSearch: () => {
       googleRef.current?.clear();
     },
   }));
+
+  const handlePress = useCallback((data: any, details: any = null) => {
+    onPlaceSelected({ data, details });
+  }, [onPlaceSelected]);
+
+  const renderRow = useCallback((data: any) => {
+    const mainText = data.structured_formatting.main_text;
+    const secondaryText = data.structured_formatting.secondary_text;
+  
+    const truncatedMainText = mainText.length > 35 ? `${mainText.slice(0, 30)}...` : mainText;
+    const truncatedSecondaryText = secondaryText.length > 70 ? `${secondaryText.slice(0, 40)}...` : secondaryText;
+  
+    return (
+      <View style={styles.suggestionRow}>
+        <Image source={require('../../assets/images/location.png')} style={styles.locationIcon} />
+        <View style={styles.textContainer}>
+          <Text style={styles.mainText}>{truncatedMainText}</Text>
+          <Text style={styles.secondaryText}>{truncatedSecondaryText}</Text>
+        </View>
+      </View>
+    );
+  }, []);
 
   return (
     <View style={styles.wrapper}>
@@ -30,7 +52,8 @@ const SearchBar = forwardRef<SearchBarRef, Props>(({ onPlaceSelected, query, set
         placeholder="Search for a location"
         minLength={2}
         fetchDetails
-        onPress={(data, details = null) => onPlaceSelected({ data, details })}        query={{
+        onPress={handlePress}
+        query={{
           key: GOOGLE_MAPS_API_KEY,
           language: 'en',
           components: 'country:in'
@@ -86,28 +109,11 @@ const SearchBar = forwardRef<SearchBarRef, Props>(({ onPlaceSelected, query, set
             backgroundColor: '#eee',
           },
         }}
-        renderRow={(data) => {
-          const mainText = data.structured_formatting.main_text;
-          const secondaryText = data.structured_formatting.secondary_text;
-        
-          const truncatedMainText = mainText.length > 35 ? `${mainText.slice(0, 30)}...` : mainText;
-          const truncatedSecondaryText = secondaryText.length > 70 ? `${secondaryText.slice(0, 40)}...` : secondaryText;
-        
-          return (
-            <View style={styles.suggestionRow}>
-              <Image source={require('../../assets/images/location.png')} style={styles.locationIcon} />
-              <View style={styles.textContainer}>
-                <Text style={styles.mainText}>{truncatedMainText}</Text>
-                <Text style={styles.secondaryText}>{truncatedSecondaryText}</Text>
-              </View>
-            </View>
-          );
-        }}
-        
+        renderRow={renderRow}
       />
     </View>
   );
-});
+}));
 
 const styles = StyleSheet.create({  wrapper: {
     zIndex: 1000,

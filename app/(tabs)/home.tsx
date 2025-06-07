@@ -161,8 +161,7 @@ const HomepageMap = () => {
     <SafeAreaView style={{ flex: 1 }}>
       <StatusBar translucent backgroundColor="transparent" style="dark" />
       <View style={styles.container}>
-        {/* --- SEARCHBAR TEMPORARILY REMOVED FOR DEBUGGING --- */}
-        {/*
+        {/* --- RESTORING SEARCHBAR --- */}
         <View style={styles.searchBarContainer}>
           <SearchBar 
             onPlaceSelected={handleSearchSelect} 
@@ -170,9 +169,8 @@ const HomepageMap = () => {
             setQuery={setSearchQuery} 
           />
         </View>
-        */}
 
-        {/* --- RESTORING MAPVIEW --- */}
+        {/* --- MAPVIEW --- */}
         <MapView
           ref={mapRef}
           style={styles.map}
