@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { View, TextInput, FlatList, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, TextInput, FlatList, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Image } from 'react-native';
 import axios from 'axios';
 
 const GOOGLE_MAPS_API_KEY = 'AIzaSyAR8Sxn_UmTfySxL4DT1RefR8j-QYGntpA'; // Ensure this key is correct and enabled
@@ -10,7 +10,7 @@ type Props = {
     name: string;
     formatted_address: string;
     place_id: string;
-  }) => void;
+  } | null) => void; // Allow null to signal a clear event
 };
 
 const SearchBar = ({ onPlaceSelected }: Props) => {
@@ -18,9 +18,10 @@ const SearchBar = ({ onPlaceSelected }: Props) => {
   const [predictions, setPredictions] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const debounceTimeout = useRef<NodeJS.Timeout | null>(null);
+  const justSelected = useRef(false); // Ref to prevent re-fetching after selection
 
   const getPlacePredictions = async (text: string) => {
-    if (text.length < 3) {
+    if (text.length < 2) { // Start searching at 2 characters
       setPredictions([]);
       return;
     }
@@ -37,8 +38,9 @@ const SearchBar = ({ onPlaceSelected }: Props) => {
   };
 
   const getPlaceDetails = useCallback(async (placeId: string, description: string) => {
-    setQuery(description); // Show full text in input
-    setPredictions([]); // Hide list
+    justSelected.current = true; // Signal that a selection was made
+    setQuery(description);
+    setPredictions([]); // Hide list immediately
     try {
       const url = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=geometry,name,formatted_address,place_id&key=${GOOGLE_MAPS_API_KEY}`;
       const response = await axios.get(url);
@@ -50,25 +52,44 @@ const SearchBar = ({ onPlaceSelected }: Props) => {
     }
   }, [onPlaceSelected]);
 
+  const handleClear = () => {
+    setQuery('');
+    setPredictions([]);
+    onPlaceSelected(null); // Signal to parent to clear marker
+  };
+
   useEffect(() => {
+    if (justSelected.current) {
+      justSelected.current = false;
+      return; // Skip fetching predictions right after a selection
+    }
     if (debounceTimeout.current) {
       clearTimeout(debounceTimeout.current);
     }
     if (query) {
       debounceTimeout.current = setTimeout(() => {
         getPlacePredictions(query);
-      }, 500); // Debounce for 500ms
+      }, 300); // Debounce for 300ms
+    } else {
+      setPredictions([]);
     }
   }, [query]);
 
   return (
     <View style={styles.container}>
-      <TextInput
-        style={styles.textInput}
-        placeholder="Search for a location"
-        value={query}
-        onChangeText={setQuery}
-      />
+      <View style={styles.inputContainer}>
+        <TextInput
+          style={styles.textInput}
+          placeholder="Search for a location"
+          value={query}
+          onChangeText={setQuery}
+        />
+        {query.length > 0 && (
+          <TouchableOpacity onPress={handleClear} style={styles.clearButton}>
+            <Image source={require('../../assets/images/close.png')} style={styles.clearIcon} />
+          </TouchableOpacity>
+        )}
+      </View>
       {loading && <ActivityIndicator style={styles.loader} />}
       {predictions.length > 0 && (
         <View style={styles.listView}>
@@ -96,21 +117,37 @@ const styles = StyleSheet.create({
     right: 0,
     zIndex: 1000,
   },
-  textInput: {
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: '#fff',
     borderRadius: 10,
     height: 48,
-    paddingHorizontal: 15,
-    fontSize: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
     shadowRadius: 4,
     elevation: 5,
   },
+  textInput: {
+    flex: 1,
+    height: '100%',
+    paddingHorizontal: 15,
+    fontSize: 16,
+  },
+  clearButton: {
+    padding: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  clearIcon: {
+    width: 16,
+    height: 16,
+    tintColor: '#888'
+  },
   loader: {
     position: 'absolute',
-    right: 15,
+    right: 50, // Adjusted to make space for clear button
     top: 14,
   },
   listView: {

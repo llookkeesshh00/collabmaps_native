@@ -100,7 +100,12 @@ const HomepageMap = () => {
   }, []);
 
   const handleSearchSelect = useCallback((details: any) => {
-    if (!details) return;
+    // Handle the clear button press
+    if (!details) {
+      setDestination(null);
+      setIsModalVisible(false);
+      return;
+    }
 
     const { lat, lng } = details.geometry.location;
     const placeId = details.place_id;
@@ -116,9 +121,8 @@ const HomepageMap = () => {
       longitudeDelta: 0.02,
     }, 800);
 
-    // Re-enable getPlacePhoto to fetch images
     getPlacePhoto(placeId, name);
-  }, [getPlacePhoto]); // Dependency is correct
+  }, [getPlacePhoto]);
 
   const handleMyLocationPress = useCallback(async () => {
     try {
