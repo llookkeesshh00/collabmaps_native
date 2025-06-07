@@ -190,7 +190,6 @@ const HomepageMap = () => {
           showsMyLocationButton={false}
           mapPadding={{ top: 0, right: 0, bottom: 100, left: 0 }}
         >
-          {userLocation && <Marker coordinate={userLocation} title="You are here" pinColor='blue'/>}
           {destination && (
             <Marker
               coordinate={{
