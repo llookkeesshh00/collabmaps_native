@@ -34,7 +34,6 @@ const HomepageMap = () => {
     longitudeDelta: 0.05,
   }), [userLocation]);
 
-  // Standalone function for requesting and setting user location
   const requestLocation = useCallback(async () => {
     setLoading(true);
     try {
@@ -45,24 +44,15 @@ const HomepageMap = () => {
         setUserLocation(null); // Explicitly set to null
         return; // Exit if permission is denied
       }
-
       const location = await Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.High,
       });
-
       if (location?.coords) {
-        const coords = {
+        // This function now ONLY sets state. No side-effects.
+        setUserLocation({
           latitude: location.coords.latitude,
           longitude: location.coords.longitude,
-        };
-        setUserLocation(coords);
-
-        // Animate map only after location is set and mapRef is available
-        mapRef.current?.animateToRegion({
-          ...coords,
-          latitudeDelta: 0.05,
-          longitudeDelta: 0.05,
-        }, 1000);
+        });
       }
     } catch (error) {
       console.error("Location setup error:", error);
@@ -75,6 +65,17 @@ const HomepageMap = () => {
   useEffect(() => {
     requestLocation();
   }, [requestLocation]);
+
+  // NEW useEffect to handle the map animation side-effect
+  useEffect(() => {
+    if (userLocation && mapRef.current) {
+      mapRef.current.animateToRegion({
+        ...userLocation,
+        latitudeDelta: 0.05,
+        longitudeDelta: 0.05,
+      }, 1000);
+    }
+  }, [userLocation]); // This runs only when userLocation changes
 
   const getPlacePhoto = useCallback(async (placeId: string, nameFromAutocomplete: string) => {
     const apiKey = GOOGLE_MAPS_API_KEY;
