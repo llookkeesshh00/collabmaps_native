@@ -161,6 +161,8 @@ const HomepageMap = () => {
     <SafeAreaView style={{ flex: 1 }}>
       <StatusBar translucent backgroundColor="transparent" style="dark" />
       <View style={styles.container}>
+        {/* --- SEARCHBAR TEMPORARILY REMOVED FOR DEBUGGING --- */}
+        {/*
         <View style={styles.searchBarContainer}>
           <SearchBar 
             onPlaceSelected={handleSearchSelect} 
@@ -168,6 +170,7 @@ const HomepageMap = () => {
             setQuery={setSearchQuery} 
           />
         </View>
+        */}
 
         {/* --- RESTORING MAPVIEW --- */}
         <MapView
@@ -192,8 +195,7 @@ const HomepageMap = () => {
           <Image source={require('../../assets/images/my-location.png')} style={styles.asideIcon} />
         </TouchableOpacity>
 
-        {/* --- MODAL TEMPORARILY REMOVED FOR DEBUGGING --- */}
-        {/*
+        {/* --- RESTORING MODAL --- */}
         <Modal
           isVisible={isModalVisible}
           onBackdropPress={() => setIsModalVisible(false)}
@@ -269,7 +271,6 @@ const HomepageMap = () => {
             </View>
           </View>
         </Modal>
-        */}
       </View>
     </SafeAreaView>
   );
