@@ -2,25 +2,20 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { View, TextInput, FlatList, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Image } from 'react-native';
 import axios from 'axios';
 
-const GOOGLE_MAPS_API_KEY = 'AIzaSyAR8Sxn_UmTfySxL4DT1RefR8j-QYGntpA'; // Ensure this key is correct and enabled
+const GOOGLE_MAPS_API_KEY = 'YOUR_GOOGLE_MAPS_API_KEY'; // Replace with your key
 
 type Props = {
   query: string;
   onQueryChange: (text: string) => void;
-  onPlaceSelected: (details: {
-    geometry: { location: { lat: number; lng: number } };
-    name: string;
-    formatted_address: string;
-    place_id: string;
-  } | null) => void; // Allow null to signal a clear event
+  onPlaceSelected: (details: any | null) => void;
 };
 
 const SearchBar = ({ query, onQueryChange, onPlaceSelected }: Props) => {
   const [predictions, setPredictions] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [showPredictions, setShowPredictions] = useState(true);
   const debounceTimeout = useRef<NodeJS.Timeout | null>(null);
   const textInputRef = useRef<TextInput>(null);
-  const justSelected = useRef(false); // Flag to prevent re-fetching
 
   const getPlacePredictions = async (text: string) => {
     if (text.length < 2) { // Start searching at 2 characters
@@ -52,31 +47,39 @@ const SearchBar = ({ query, onQueryChange, onPlaceSelected }: Props) => {
   }, [onPlaceSelected]);
   
   const handlePressRow = (placeId: string, description: string) => {
-    justSelected.current = true;
-    setPredictions([]); // Hide list immediately on press
+    setShowPredictions(false);
     onQueryChange(description);
     getPlaceDetails(placeId);
+    textInputRef.current?.blur();
   };
 
   const handleClear = () => {
     onQueryChange('');
     onPlaceSelected(null);
     setPredictions([]);
+    setShowPredictions(false);
+  };
+
+  const handleChangeText = (text: string) => {
+    onQueryChange(text);
+    if (!showPredictions) {
+      setShowPredictions(true);
+    }
   };
 
   useEffect(() => {
-    // If a place was just selected, don't re-fetch
-    if (justSelected.current) {
-      justSelected.current = false;
-      return;
-    }
     if (debounceTimeout.current) clearTimeout(debounceTimeout.current);
-    if (query.length > 2) {
+
+    if (showPredictions && query.length > 2) {
       debounceTimeout.current = setTimeout(() => getPlacePredictions(query), 300);
     } else {
       setPredictions([]);
     }
-  }, [query]);
+
+    return () => {
+      if (debounceTimeout.current) clearTimeout(debounceTimeout.current);
+    };
+  }, [query, showPredictions]);
 
   return (
     <View style={styles.container}>
@@ -86,7 +89,8 @@ const SearchBar = ({ query, onQueryChange, onPlaceSelected }: Props) => {
           style={styles.textInput}
           placeholder="Search for a location"
           value={query}
-          onChangeText={onQueryChange} // Controlled by parent
+          onChangeText={handleChangeText}
+          onFocus={() => setShowPredictions(true)}
         />
         {query.length > 0 && (
           <TouchableOpacity onPress={handleClear} style={styles.clearButton}>
@@ -95,7 +99,7 @@ const SearchBar = ({ query, onQueryChange, onPlaceSelected }: Props) => {
         )}
       </View>
       {loading && <ActivityIndicator style={styles.loader} />}
-      {predictions.length > 0 && (
+      {showPredictions && predictions.length > 0 && (
         <View style={styles.listView}>
           <FlatList
             data={predictions}
