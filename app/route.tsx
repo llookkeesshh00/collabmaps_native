@@ -1,12 +1,13 @@
 import { useLocalSearchParams, router } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, StyleSheet, View, Image, Text, TouchableOpacity } from 'react-native';
+import { ActivityIndicator, StyleSheet, View, Text, TouchableOpacity } from 'react-native';
 import MapView, { Marker, Polyline } from 'react-native-maps';
 import axios from 'axios';
 import polyline from '@mapbox/polyline';
 import Constants from 'expo-constants';
 import Modal from 'react-native-modal';
 import { useWebSocket } from './services/WebSocketService';
+import { MapPin, Flag, Clock, Route, Play, X, Navigation2 } from 'lucide-react-native';
 
 const GOOGLE_MAPS_API_KEY = Constants.expoConfig?.extra?.googleMapsApiKey;
 
@@ -29,6 +30,7 @@ export default function RouteScreen() {
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedMode, setSelectedMode] = useState<string>('bike');
   const [userSelectedRoute, setUserSelectedRoute] = useState<boolean>(false);
+  const webSocketService = useWebSocket();
 
 
   const source = {
@@ -139,7 +141,6 @@ export default function RouteScreen() {
     setModalVisible(false);
     if (from === 'livemap') {
       // Update the route in the WebSocket service
-      const webSocketService = useWebSocket();
       const { roomId, userId } = webSocketService.getRoomAndUserIds();
       if (userId) {
         webSocketService.updateRoute(userId, {
@@ -176,14 +177,14 @@ export default function RouteScreen() {
     <View style={styles.container}>
       <MapView style={StyleSheet.absoluteFillObject} initialRegion={{ latitude: source.latitude, longitude: source.longitude, latitudeDelta: 0.05, longitudeDelta: 0.05 }}>
         <Marker coordinate={source}>
-          <View style={{ width: 30, height: 30 }}>
-            <Image source={require('../assets/images/current.png')} style={{ width: '100%', height: '100%' }} resizeMode="contain" />
+          <View style={{ width: 30, height: 30, justifyContent: 'center', alignItems: 'center' }}>
+            <MapPin size={30} color="#2D79F4" />
           </View>
         </Marker>
 
         <Marker coordinate={destination}>
-          <View style={{ width: 30, height: 30 }}>
-            <Image source={require('../assets/images/destination.png')} style={{ width: '100%', height: '100%' }} resizeMode="contain" />
+          <View style={{ width: 30, height: 30, justifyContent: 'center', alignItems: 'center' }}>
+            <Flag size={30} color="#FF4D00" />
           </View>
         </Marker>
 
@@ -212,29 +213,20 @@ export default function RouteScreen() {
               <View style={styles.routeDetailsContainer}>
                 <View style={styles.infoRow}>
                   <View style={styles.circleIconContainer}>
-                    <Image
-                      source={require('../assets/images/duration.png')}
-                      style={styles.icon}
-                    />
+                    <Clock size={30} color="#4CAF50" />
                   </View>
                   <Text style={{fontSize:26,color:'green'}}>{(selectedRoute.duration / 60).toFixed(1)} min</Text>
                 </View>
                 <View style={styles.infoRow}>
                   <View style={styles.circleIconContainer}>
-                    <Image
-                      source={require('../assets/images/summary.png')}
-                      style={styles.icon}
-                    />
+                    <Route size={30} color="#2D79F4" />
                   </View>
                   <Text>{selectedRoute.summary}</Text>
                 </View>
 
                 <View style={styles.infoRow}>
                   <View style={styles.circleIconContainer}>
-                    <Image
-                      source={require('../assets/images/distance.png')}
-                      style={styles.icon}
-                    />
+                    <Navigation2 size={30} color="#2D79F4" />
                   </View>
                   <Text style={styles.routeDistance}>
                     {(selectedRoute.distance / 1000).toFixed(1)} km
@@ -245,11 +237,11 @@ export default function RouteScreen() {
 
               <View style={styles.actionsContainer}>
                 <TouchableOpacity style={styles.optionButton} onPress={handleRoute}>
-                  <Image source={require('../assets/images/start.png')} style={styles.myLocationIcon} />
+                  <Play size={24} color="white" />
                   <Text style={styles.optionText}>{from === 'livemap' ? 'Select Route' : 'Start'}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={[styles.optionButton, { backgroundColor: '#EEEEEE' }]} onPress={() => setModalVisible(false)}>
-                  <Image source={require('../assets/images/close.png')} style={styles.myLocationIcon} />
+                  <X size={24} color="black" />
                   <Text style={[styles.optionText, { color: 'black' }]}>Cancel</Text>
                 </TouchableOpacity>
               </View>
@@ -303,17 +295,7 @@ const styles = StyleSheet.create({
     marginRight: 8,
     padding:10
   },
-
-  myLocationIcon: {
-    width: 24,
-    height: 24,
-    resizeMode: 'contain',
-  },
-  icon:{
-    width: 30,
-    height: 30,
-  }
-  ,selectedModeButton: {
+  selectedModeButton: {
     borderRadius: 40,
     padding: 5,
     backgroundColor: '#A0F1F9',

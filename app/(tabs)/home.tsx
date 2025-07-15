@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import { Alert, View, StyleSheet, TouchableOpacity, Image, Text } from 'react-native';
-import MapView, { Marker, Callout } from 'react-native-maps';
+import MapView, { Marker } from 'react-native-maps';
 import * as Location from 'expo-location';
 import SearchBar from '../components/SearchBar';
 import Modal from 'react-native-modal';
@@ -9,6 +9,7 @@ import { useRouter } from "expo-router";
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import Constants from 'expo-constants';
+import { MapPin, Navigation, Users, X } from 'lucide-react-native';
 
 // Hard-code the API key directly to avoid runtime issues
 const GOOGLE_MAPS_API_KEY = Constants.expoConfig?.extra?.googleMapsApiKey;
@@ -24,7 +25,6 @@ const HomepageMap = () => {
   const [destination, setDestination] = useState<any>(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [placeDetails, setPlaceDetails] = useState<{ name: string; address: string; photoUrls?: string[]; placeId?: string; } | null>(null);
-  const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState('');
   const router = useRouter();
 
@@ -37,7 +37,6 @@ const HomepageMap = () => {
   }), [userLocation]);
 
   const requestLocation = useCallback(async () => {
-    setLoading(true);
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
@@ -59,8 +58,6 @@ const HomepageMap = () => {
     } catch (error) {
       console.error("Location setup error:", error);
       Alert.alert("Location Error", "Could not fetch your current location. Please ensure location services are enabled.");
-    } finally {
-      setLoading(false); // Ensure loading is set to false after completion
     }
   }, []);
 
@@ -167,11 +164,11 @@ const HomepageMap = () => {
         placeId: placeDetails?.placeId,
       },
     });
-  }, [destination, placeDetails]);
+  }, [destination, placeDetails, router]);
 
   return (
     <SafeAreaView style={{ flex: 1 }}>
-      <StatusBar translucent backgroundColor="transparent" style="dark" />
+      <StatusBar translucent style="dark" />
       <View style={styles.container}>
         <View style={styles.searchBarContainer}>
           <SearchBar
@@ -203,7 +200,7 @@ const HomepageMap = () => {
         </MapView>
         
         <TouchableOpacity style={styles.myLocationButton} onPress={handleMyLocationPress}>
-          <Image source={require('../../assets/images/my-location.png')} style={styles.asideIcon} />
+          <MapPin size={24} color="#333" />
         </TouchableOpacity>
 
         {/* --- RESTORING MODAL --- */}
@@ -258,7 +255,7 @@ const HomepageMap = () => {
                   }
                 }}
               >
-                <Image source={require('../../assets/images/directions.png')} style={styles.asideIcon} />
+                <Navigation size={24} color="white" />
                 <Text style={styles.optionText}>Directions</Text>
               </TouchableOpacity>
 
@@ -266,7 +263,7 @@ const HomepageMap = () => {
                 style={styles.optButton}
                 onPress={() => { handleCollabPress() }}
               >
-                <Image source={require('../../assets/images/coolab.png')} style={styles.asideIcon} />
+                <Users size={24} color="white" />
                 <Text style={styles.optionText}>Collab</Text>
               </TouchableOpacity>
 
@@ -274,7 +271,7 @@ const HomepageMap = () => {
                 style={[styles.optionButton, { backgroundColor: '#EEEEEE' }]}
                 onPress={() => { setIsModalVisible(false); }}
               >
-                <Image source={require('../../assets/images/close.png')} style={styles.asideIcon} />
+                <X size={24} color="black" />
                 <Text style={[styles.optionText, { color: 'black' }]}>Cancel</Text>
               </TouchableOpacity>
             </View>

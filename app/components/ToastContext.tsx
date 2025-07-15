@@ -1,4 +1,4 @@
-import React, { createContext, useState, useContext, useRef, useCallback, useEffect } from 'react';
+import React, { createContext, useState, useContext, useRef, useCallback } from 'react';
 import { View, Text, Animated, StyleSheet } from 'react-native';
 
 // Define toast types for styling

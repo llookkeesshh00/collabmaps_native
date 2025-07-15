@@ -105,7 +105,7 @@ export default function CollabPage() {
       errorHandlerRef.current?.();
 
       // Store the roomId received from CREATED_ROOM event
-      let receivedRoomId = null;
+      let receivedRoomId: string | null = null;
 
       // Handle successful room creation
       createdHandlerRef.current = webSocketService.onMessage('CREATED_ROOM', (payload) => {
@@ -141,7 +141,7 @@ export default function CollabPage() {
       });
 
       // Helper function to navigate to LiveMap
-      const navigateToLiveMap = (roomId) => {
+      const navigateToLiveMap = (roomId: string) => {
         router.push({
           pathname: '/livemap',
           params: {

@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef, useMemo, useCallback } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Image, Alert, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Alert, ScrollView, ActivityIndicator } from 'react-native';
 import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
 import { useLocalSearchParams, router } from 'expo-router';
 import { useWebSocket } from './services/WebSocketService';
@@ -8,6 +8,7 @@ import Modal from 'react-native-modal';
 import { Animated, Easing } from 'react-native';
 // Import SafeAreaView from react-native instead of the context package
 import { SafeAreaView } from 'react-native';
+import { Users, Flag, Clock, Navigation2, X, Route, Eye, EyeOff } from 'lucide-react-native';
 
 export default function LiveMapPage() {
     // Get parameters from URL
@@ -37,7 +38,6 @@ export default function LiveMapPage() {
     const [showAllRoutes, setShowAllRoutes] = useState(false); // Default to hiding routes
     const [isLoading, setIsLoading] = useState(true);
     const [isModalVisible, setIsModalVisible] = useState(false);
-    const [selectedUser, setSelectedUser] = useState<string | null>(null);
 
     // Track the current user's location based on WebSocket room updates
     const [myCurrentLocation, setMyCurrentLocation] = useState(myLocation);
@@ -370,7 +370,6 @@ export default function LiveMapPage() {
         const roomDetails = webSocketService.getRoomDetails(roomId);
         const isRoomOwner = roomDetails?.createdBy === userId;
         
-        const actionText = isRoomOwner ? "terminate" : "leave";
         const confirmTitle = isRoomOwner ? "Terminate Room" : "Leave Room";
         const confirmMessage = isRoomOwner 
             ? "Are you sure you want to terminate this room? All participants will be disconnected."
@@ -642,7 +641,7 @@ export default function LiveMapPage() {
                     }}
                     style={styles.participantsButton}
                 >
-                    <Image source={require('../assets/images/team.png')} style={styles.routeInfoIcon} />
+                    <Users size={20} color="white" />
                     <Text style={styles.participantsButtonText}>
                         {Object.keys(users).length}
                     </Text>
@@ -677,10 +676,9 @@ export default function LiveMapPage() {
                         longitude: parseFloat(dlng as string) || 0
                     }}
                 >
-                    <Image
-                        source={require('../assets/images/destination.png')}
-                        style={{ width: 40, height: 40 }}
-                    />
+                    <View style={{ width: 40, height: 40, justifyContent: 'center', alignItems: 'center' }}>
+                        <Flag size={40} color="#FF4D00" />
+                    </View>
                 </Marker>
 
                 {/* MY USER MARKER - using same color coding as other users */}
@@ -725,7 +723,7 @@ export default function LiveMapPage() {
             </MapView>
 
             <TouchableOpacity style={styles.toggleRoutesButton} onPress={toggleShowAllRoutes}>
-                <Image source={require('../assets/images/summary.png')} style={styles.directionsIcon} />
+                {showAllRoutes ? <EyeOff size={30} color="white" /> : <Eye size={30} color="white" />}
                 <Text style={styles.toggleButtonText}>{showAllRoutes ? 'Hide' : 'Show'} Routes</Text>
             </TouchableOpacity>
 
@@ -817,9 +815,9 @@ export default function LiveMapPage() {
                                     {formatDuration(parseInt(duration as string, 10))}
                                 </Text>
                                 <View style={styles.routeDetailsRow}>
-                                    <Image source={require('../assets/images/distance.png')} style={styles.routeInfoIcon} />
+                                    <Navigation2 size={20} color="white" />
                                     <Text style={styles.routeDetailsText}>{(parseInt(routeInfo.distance as string) / 1000).toFixed(1)} km | </Text>
-                                    <Image source={require('../assets/images/duration.png')} style={styles.routeInfoIcon} />
+                                    <Clock size={20} color="white" />
                                     <Text style={styles.routeDetailsText}>{getArrivalTime(parseInt(duration as string, 10))}</Text>
                                 </View>
                             </View>
@@ -829,7 +827,7 @@ export default function LiveMapPage() {
                                     style={styles.getDirectionsPrompt}
                                     onPress={handleDirections}
                                 >
-                                    <Image source={require('../assets/images/directions.png')} style={styles.directionsPromptIcon} />
+                                    <Route size={20} color="white" />
                                     <Text style={styles.getDirectionsText}>Get Directions</Text>
                                 </TouchableOpacity>
                             </View>
@@ -839,7 +837,7 @@ export default function LiveMapPage() {
                             onPress={handleCloseRoom}
                             style={styles.leaveRoomButton}
                         >
-                            <Image source={require('../assets/images/close.png')} style={styles.myLocationIcon} />
+                            <X size={24} color="white" />
                         </TouchableOpacity>
                     </View>
                 </Modal>
@@ -936,15 +934,6 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.3,
         shadowRadius: 4,
         elevation: 5
-    },
-    directionsIcon: {
-        width: 30,
-        height: 30
-    },
-
-    routeInfoIcon: {
-        width: 20,
-        height: 20
     },
     routeInfoText: {
         color: 'white',
@@ -1082,10 +1071,6 @@ const styles = StyleSheet.create({
         borderWidth: 0,
         borderColor: "gray",
     },
-    myLocationIcon: {
-        width: 24,
-        height: 24,
-    },
     bottomModalContainer: {
         backgroundColor: 'white',
         padding: 20,
@@ -1165,10 +1150,5 @@ const styles = StyleSheet.create({
         borderRadius: 40,
         borderWidth: 0,
         borderColor: "gray",
-    },
-    directionsPromptIcon: {
-        width: 20,
-        height: 20,
-        tintColor: 'white'
     },
 });

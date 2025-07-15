@@ -16,6 +16,7 @@ config.resolver = {
     get: (target, name) => path.join(process.cwd(), `node_modules/${name}`),
   }),
   sourceExts: [...config.resolver.sourceExts, 'cjs', 'mjs'],
+  platforms: ['ios', 'android', 'native'],
 };
 
 module.exports = withNativeWind(config, { input: './app/global.css' });

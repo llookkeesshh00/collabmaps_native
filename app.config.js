@@ -1,8 +1,8 @@
 require('dotenv').config();
 
 module.exports = () => ({
-  name: 'maps',
-  slug: 'maps',
+  name: 'collabmaps',
+  slug: 'collabmaps',
   version: '1.0.0',
   orientation: 'portrait',
   icon: './assets/images/app-icon.jpg',
@@ -26,22 +26,17 @@ module.exports = () => ({
       },
     },
     adaptiveIcon: {
-      foregroundImage: './assets/images/adaptive-icon.png',
+      foregroundImage: './assets/images/app-icon.jpg',
       backgroundColor: '#ffffff',
     },
     package: 'com.anonymous.maps',
-  },
-  web: {
-    bundler: 'metro',
-    output: 'static',
-    favicon: './assets/images/favicon.png',
   },
   plugins: [
     'expo-router',
     [
       'expo-splash-screen',
       {
-        image: './assets/images/splash-icon.png',
+        image: './assets/images/splash-icon.jpg',
         imageWidth: 200,
         resizeMode: 'contain',
         backgroundColor: '#ffffff',

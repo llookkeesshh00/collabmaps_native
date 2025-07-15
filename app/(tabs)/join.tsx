@@ -3,7 +3,6 @@ import { View, TextInput, TouchableOpacity, StyleSheet, Text, Alert, Switch } fr
 import { router } from 'expo-router';
 import { useWebSocket } from '../services/WebSocketService';
 import * as Location from 'expo-location';
-import Constants from 'expo-constants';
 
 export default function JoinPage() {
   const [roomId, setRoomId] = useState('');
@@ -17,6 +16,7 @@ export default function JoinPage() {
   // Store unsub functions to clean up old handlers
   const joinSuccessHandlerRef = useRef<() => void>();
   const errorHandlerRef = useRef<() => void>();
+  const userIdHandlerRef = useRef<() => void>();
 
   useEffect(() => {
     // Request location on mount
@@ -66,9 +66,10 @@ export default function JoinPage() {
       // Remove any existing handlers before setting new ones
       joinSuccessHandlerRef.current?.();
       errorHandlerRef.current?.();
+      userIdHandlerRef.current?.();
 
       // First set up a handler for USER_ID_ASSIGNED
-      const userIdHandler = webSocketService.onMessage('USER_ID_ASSIGNED', (payload) => {
+      userIdHandlerRef.current = webSocketService.onMessage('USER_ID_ASSIGNED', (payload) => {
         console.log('Got USER_ID_ASSIGNED in join.tsx:', payload);
         if (payload && payload.userId) {
           // Store userId immediately when received
@@ -114,7 +115,7 @@ export default function JoinPage() {
       });
 
       // Helper function for navigation
-      const navigateToLivemap = (roomId, userId, roomDetails) => {
+      const navigateToLivemap = (roomId: string, userId: string, roomDetails: any) => {
         // Start location updates immediately so others can see the joiner
         webSocketService.startLocationUpdates(5000);
         

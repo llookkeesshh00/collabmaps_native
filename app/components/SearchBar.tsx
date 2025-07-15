@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { View, TextInput, FlatList, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Image } from 'react-native';
+import { View, TextInput, FlatList, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import axios from 'axios';
 import Constants from 'expo-constants';
+import { X, MapPin } from 'lucide-react-native';
 
 const GOOGLE_MAPS_API_KEY = Constants.expoConfig?.extra?.googleMapsApiKey;
 
@@ -95,7 +96,7 @@ const SearchBar = ({ query, onQueryChange, onPlaceSelected }: Props) => {
         />
         {query.length > 0 && (
           <TouchableOpacity onPress={handleClear} style={styles.clearButton}>
-            <Image source={require('../../assets/images/close.png')} style={styles.clearIcon} />
+            <X size={16} color="#888" />
           </TouchableOpacity>
         )}
       </View>
@@ -107,7 +108,9 @@ const SearchBar = ({ query, onQueryChange, onPlaceSelected }: Props) => {
             keyExtractor={(item) => item.place_id}
             renderItem={({ item }) => (
               <TouchableOpacity style={styles.row} onPress={() => handlePressRow(item.place_id, item.description)}>
-                <Image source={require('../../assets/images/location.png')} style={styles.locationIcon} />
+                <View style={{ marginRight: 10 }}>
+                  <MapPin size={20} color="#555" />
+                </View>
                 <Text style={styles.suggestionText}>{item.description}</Text>
               </TouchableOpacity>
             )}
@@ -177,12 +180,6 @@ const styles = StyleSheet.create({
     padding: 15,
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
-  },
-  locationIcon: {
-    width: 20,
-    height: 20,
-    marginRight: 10,
-    tintColor: '#555',
   },
   suggestionText: {
     flex: 1,
