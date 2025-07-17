@@ -109,7 +109,7 @@ export default function LiveMapPage() {
             // Just clean up location updates on unmount
             webSocketService.stopLocationUpdates();
         };
-    }, [roomId, userId, myLocation, isValidCoordinate]);
+    }, [roomId, userId, myLocation, isValidCoordinate, webSocketService]);
 
     // Set up message listeners for WebSocket updates
     useEffect(() => {
@@ -286,7 +286,7 @@ export default function LiveMapPage() {
             unsubscribeError();
             webSocketService.stopLocationUpdates();
         };
-    }, [points, duration, distance, mode, userId, router]);
+    }, [points, duration, distance, mode, userId, webSocketService, routeCoordinates, showToast]);
 
     // Update my location from the WebSocketService's room details
     useEffect(() => {
@@ -361,7 +361,7 @@ export default function LiveMapPage() {
                 }),
             ])
         ).start();
-    }, []);
+    }, [glowAnim]);
 
     // Memoized callbacks
     const handleCloseRoom = useCallback(() => {
@@ -400,7 +400,7 @@ export default function LiveMapPage() {
                 }
             ]
         );
-    }}, [roomId, userId]);
+    }}, [roomId, userId, webSocketService]);
 
     const handleDirections = useCallback(() => {
         router.push({
@@ -569,7 +569,7 @@ export default function LiveMapPage() {
             }
             return null;
         });
-    }, [users, showAllRoutes, userId]);
+    }, [users, showAllRoutes, userId, getColorForUserId]);
 
     // Current user's route
     const MyRoute = useMemo(() => {

@@ -11,8 +11,8 @@ export default function CollabPage() {
   const webSocketService = useWebSocket();
 
   // Refs to store unsubscribe handlers
-  const createdHandlerRef = useRef<() => void>();
-  const errorHandlerRef = useRef<() => void>();
+  const createdHandlerRef = useRef<(() => void) | null>(null);
+  const errorHandlerRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     // Request location permission on mount
@@ -81,7 +81,7 @@ export default function CollabPage() {
       errorHandlerRef.current?.();
       userIdHandler?.();
     };
-  }, []);
+  }, [dlat, dlng, userLocation?.latitude, userLocation?.longitude, username, webSocketService]);
 
   const handleCreateRoom = async () => {
     if (!username) {

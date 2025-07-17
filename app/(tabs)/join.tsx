@@ -14,9 +14,9 @@ export default function JoinPage() {
   const [serverUrl, setServerUrl] = useState(websocketurl || 'ws://192.168.1.2:3001');
 
   // Store unsub functions to clean up old handlers
-  const joinSuccessHandlerRef = useRef<() => void>();
-  const errorHandlerRef = useRef<() => void>();
-  const userIdHandlerRef = useRef<() => void>();
+  const joinSuccessHandlerRef = useRef<(() => void) | null>(null);
+  const errorHandlerRef = useRef<(() => void) | null>(null);
+  const userIdHandlerRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     // Request location on mount

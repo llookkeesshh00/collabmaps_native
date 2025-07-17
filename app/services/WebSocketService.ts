@@ -29,10 +29,15 @@ export type Room = {
   createdAt?: string;
 };
 
-// Get WebSocket URL from app config or use default
+// Get WebSocket URL from environment variables with fallbacks
 const getWebSocketUrl = () => {
-  const configuredUrl = Constants.expoConfig?.extra?.websocketUrl;
-  return configuredUrl;
+  // Try to get from EAS environment variables first (runtime)
+  const easEnvUrl = Constants.expoConfig!.extra!.websocketUrl;
+  
+  // Fallback to hardcoded default if needed
+  const defaultUrl = "wss://mapsbackend-vatp.onrender.com";
+  
+  return easEnvUrl || defaultUrl;
 };
 class WebSocketService {
   private static instance: WebSocketService | null = null;
@@ -40,7 +45,7 @@ class WebSocketService {
   private messageHandlers: Map<string, (data: any) => void> = new Map();
   private userId: string | null = null;
   private roomId: string | null = null;
-  private locationInterval: NodeJS.Timeout | null = null;
+  private locationInterval: ReturnType<typeof setInterval> | null = null;
   private serverUrl: string = getWebSocketUrl();
   
   // Store room details locally

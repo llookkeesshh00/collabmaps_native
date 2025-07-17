@@ -9,7 +9,7 @@ import Modal from 'react-native-modal';
 import { useWebSocket } from './services/WebSocketService';
 import { MapPin, Flag, Clock, Route, Play, X, Navigation2 } from 'lucide-react-native';
 
-const GOOGLE_MAPS_API_KEY = Constants.expoConfig?.extra?.googleMapsApiKey;
+const GOOGLE_MAPS_API_KEY = Constants.expoConfig!.extra!.googleMapsApiKey;
 
 type LatLng = {
   latitude: number;
@@ -70,7 +70,7 @@ export default function RouteScreen() {
     };
 
     fetchRoutes();
-  }, [slat, slng, dlat, dlng, selectedMode]);
+  }, [slat, slng, dlat, dlng, selectedMode, destination.latitude, destination.longitude]);
 
   // Show loading indicator if no routes are found
   if (!routes.length) {

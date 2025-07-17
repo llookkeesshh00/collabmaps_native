@@ -12,7 +12,7 @@ import Constants from 'expo-constants';
 import { MapPin, Navigation, Users, X } from 'lucide-react-native';
 
 // Hard-code the API key directly to avoid runtime issues
-const GOOGLE_MAPS_API_KEY = Constants.expoConfig?.extra?.googleMapsApiKey;
+const GOOGLE_MAPS_API_KEY = Constants.expoConfig!.extra!.googleMapsApiKey;
 //defining a structure for an object 
 type LatLng = {
   latitude: number;
@@ -283,7 +283,8 @@ const HomepageMap = () => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, flexDirection: 'column' },  searchBarContainer: {
+  container: { flex: 1, flexDirection: 'column' },
+  searchBarContainer: {
     position: 'absolute',
     top: 20,
     left: 15,

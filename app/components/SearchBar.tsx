@@ -4,7 +4,7 @@ import axios from 'axios';
 import Constants from 'expo-constants';
 import { X, MapPin } from 'lucide-react-native';
 
-const GOOGLE_MAPS_API_KEY = Constants.expoConfig?.extra?.googleMapsApiKey;
+const GOOGLE_MAPS_API_KEY = Constants.expoConfig!.extra!.googleMapsApiKey;
 
 type Props = {
   query: string;
@@ -16,7 +16,7 @@ const SearchBar = ({ query, onQueryChange, onPlaceSelected }: Props) => {
   const [predictions, setPredictions] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [showPredictions, setShowPredictions] = useState(true);
-  const debounceTimeout = useRef<NodeJS.Timeout | null>(null);
+  const debounceTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const textInputRef = useRef<TextInput>(null);
 
   const getPlacePredictions = async (text: string) => {
@@ -90,6 +90,7 @@ const SearchBar = ({ query, onQueryChange, onPlaceSelected }: Props) => {
           ref={textInputRef}
           style={styles.textInput}
           placeholder="Search for a location"
+          placeholderTextColor="#888"
           value={query}
           onChangeText={handleChangeText}
           onFocus={() => setShowPredictions(true)}
@@ -147,6 +148,8 @@ const styles = StyleSheet.create({
     height: '100%',
     paddingHorizontal: 15,
     fontSize: 16,
+    color: '#000',
+    backgroundColor: 'transparent',
   },
   clearButton: {
     padding: 10,

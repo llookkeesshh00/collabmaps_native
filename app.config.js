@@ -1,5 +1,7 @@
 require('dotenv').config();
 
+const buildProfile = process.env.EAS_BUILD_PROFILE || 'main';
+
 module.exports = () => ({
   name: 'collabmaps',
   slug: 'collabmaps',
@@ -9,8 +11,8 @@ module.exports = () => ({
   scheme: 'myapp',
   userInterfaceStyle: 'automatic',
   updates: {
-    url: "https://u.expo.dev/1414134b-ce5b-4d6d-924e-012fd4775165",
-    channel: "main"
+    url: "https://u.expo.dev/c1c14bce-405c-4fd6-8d13-d3f2398d1dae",
+    channel: buildProfile
   },
   runtimeVersion: {
     "policy": "appVersion"
@@ -29,7 +31,7 @@ module.exports = () => ({
       foregroundImage: './assets/images/app-icon.jpg',
       backgroundColor: '#ffffff',
     },
-    package: 'com.anonymous.maps',
+    package: 'com.anonymous.collabmaps',
   },
   plugins: [
     'expo-router',
@@ -48,10 +50,10 @@ module.exports = () => ({
   },
   extra: {
     googleMapsApiKey: process.env.GOOGLE_MAPS_API_KEY,
-    googleMapsApiBaseUrl: process.env.GOOGLE_MAPS_API_BASE_URL,
+    googleMapsApiBaseUrl: process.env.GOOGLE_MAP_API_URL,
     websocketUrl: process.env.WS_URL,
     "eas": {
-      "projectId": "1414134b-ce5b-4d6d-924e-012fd4775165"
+      "projectId": "c1c14bce-405c-4fd6-8d13-d3f2398d1dae"
     }
   },
 });
